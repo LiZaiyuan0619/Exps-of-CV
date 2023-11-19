@@ -1,0 +1,316 @@
+<html lang="en">
+
+<head>
+    <title>three.js webgl - PCD</title>
+    <style>
+        /* 先将原生的文件输入框隐藏。 */
+        #file-input {
+            display: none;
+        }
+
+        /* 设置绝对定位,将自定义按钮固定在页面右上角 */
+        .button-container {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+        }
+
+        /* 定义了按钮的样式 */
+        .custom-button {
+            background-color: #63c966;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .custom-button:hover {
+            background-color: #428a46;
+        }
+
+        #bottom-text {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background-color: transparent;
+            padding: 10px;
+            text-align: center;
+            justify-content: center;
+            /* 水平居中对齐 */
+            align-items: center;
+            /* 垂直居中对齐 */
+            padding-left: 20px;
+            /* 添加左侧内边距 */
+            padding-right: 20px;
+            /* 添加右侧内边距 */
+            padding-bottom: 20px;
+            /* 添加下侧内边距 */
+            font-size: 16px;
+            color: white;
+        }
+    </style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <!-- 
+这两行代码导入了网页需要使用的 favicon 图标和 CSS 样式文件:
+
+第一行导入 favicon 图标:
+rel="icon" 定义这是一个 favicon 图标
+href 指定图标的位置,这里使用的是 data URI 来将一个空的 base64 编码直接嵌入页面里,以隐藏默认的 favicon
+这样可以去掉页面默认的 favicon。
+
+第二行导入自定义 CSS 样式表:
+rel="stylesheet" 定义这是一个样式表文件
+type="text/css" 指定它是CSS样式表
+href="css/main.css" 指定样式表的位置在 css/main.css 文件中
+浏览器会自动请求和加载这两个资源文件,并应用到页面上。
+所以这两行代码的作用就是导入了自定义的图标和样式,覆盖了浏览器的默认外观。
+
+是建立自定义页面视觉效果的重要一步。后续可以继续通过 CSS 和 JavaScript 来丰富页面效果。 
+-->
+    <!-- 指定网站的图标，也称为favicon。在这个特定的例子中，href属性为空字符串，表示使用空的图标。通常，你会在href中提供一个图标文件的路径，这可以是一个.ico文件或其他图像格式。 -->
+    <link rel="icon" href="data:image/x-icon;base64,">
+    <!-- 引入一个CSS样式表。它指定了样式表文件的路径，即"css/main.css"。这意味着页面将使用该样式表来定义其外观和布局。确保文件路径正确，以确保页面正确引用和应用样式表。 -->
+    <link type="text/css" rel="stylesheet" href="css/main.css">
+
+</head>
+
+<body>
+    <div class="button-container">
+        <input type="file" id="file-input" accept=".pcd" multiple>
+        <button class="custom-button" onclick="openFileDialog()">选择PCD文件</button>
+    </div>
+    <div id="bottom-text">
+        这个pcd模型加载器展示了所加载的点云文件的总数(Foldercount), 以及每个点云文件的名字(...pcd), 缩放比例(Scaling)和点的数量(Pointcount), <br>
+        并实现了三个坐标轴方向的平移(PositionXYZ), 点的尺寸(Pointsize), 颜色(Pointcolor)的交互, 以及点云模型的显示和隐藏(show/off), <br>
+        希望能为使用者带来好的体验
+    </div>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "./js/three.module.js"
+      }
+    }
+  </script>
+
+    <script type="module">
+
+        import * as THREE from 'three';
+        import { OrbitControls } from './js/OrbitControls.js';
+        import { PCDLoader } from './js/PCDLoader.js';
+        import { GUI } from './js/lil-gui.module.min.js'
+
+        let camera, addcamera, scene, renderer;
+        let cameraHelper;
+        let controls, loader, gui;
+        let folderCount = 0;
+        let folderCountControl;
+        let visible;
+
+        init();
+        render();
+
+        function init() {
+
+            scene = new THREE.Scene();
+
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 0, 2);
+            scene.add(camera);
+
+            // 创建了一个新的Three.js透视相机（THREE.PerspectiveCamera），设置了其位置、视场角、远近裁剪面，并创建了一个相机助手（THREE.CameraHelper）用于可视化该相机的视锥体
+            addcamera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 10000);
+            addcamera.position.set(0, 0, 1);
+            addcamera.lookAt(new THREE.Vector3(0, 0, 0)); // 设置辅助相机的目标点为点云的中心点
+            // 创建一个相机助手，用于可视化相机的视锥体。
+            cameraHelper = new THREE.CameraHelper(addcamera);
+            scene.add(cameraHelper);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            // 渲染器像素比例设置为设备的像素比
+            renderer.setPixelRatio(window.devicePixelRatio);
+            // 渲染器的窗口大小
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            // 渲染器的背景颜色
+            renderer.setClearColor(0x000000);
+            // 将渲染器的画布元素domElement添加到HTML文档的body中
+            document.body.appendChild(renderer.domElement);
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 2;
+            controls.minPolarAngle = 0;
+            controls.maxPolarAngle = Math.PI / 2;
+
+            loader = new PCDLoader();
+            gui = new GUI();
+            gui.open();
+            folderCountControl = gui.add({ folderCount: 0 }, 'folderCount').name('Foldercount');  //folderCount的属性，并将其初始值设置为0。然后，使用gui.add方法将该属性添加到GUI中
+
+            gui.domElement.style.top = '80px'; // 设置距离顶部的像素数
+            gui.domElement.style.right = '25px'; // 设置距离左侧的像素数
+
+            // 注册了一个事件监听器，当浏览器窗口大小发生改变时触发指定的函数 onWindowResize
+            // window.addEventListener('resize', ...)：这是添加一个事件监听器，监听窗口大小改变事件。当浏览器窗口大小发生改变时，会触发 resize 事件。
+            window.addEventListener('resize', onWindowResize);
+
+        }
+
+        // 定义了一个名为 openFileDialog 的函数，该函数用于触发文件选择对话框
+        function openFileDialog() {
+            // 获取具有id为'file-input'的文件输入元素。这个元素通常是一个 <input type="file"> 元素，用于让用户选择本地文件
+            var fileInput = document.getElementById('file-input');
+            fileInput.multiple = true; // 添加此行以支持选择多个文件
+            // 触发文件输入元素的点击事件。这样会弹出文件选择对话框，让用户选择文件。
+            fileInput.click();
+        }
+
+        // 导出 openFileDialog() 为全局变量，只有导出来，我才能将函数与button绑定
+        window.openFileDialog = openFileDialog;
+
+        /*
+            function loadPCDFile(file) {
+            var reader = new FileReader();
+            
+            reader.onload = function(event) {
+                var url = event.target.result;
+                console.log(url);
+        
+                loader.load(url, function (points) {
+                    points.geometry.center();
+                    points.geometry.rotateX(Math.PI);
+                    points.name = file.name;
+                    // 生成随机颜色
+                    var colors = new THREE.Color(0xFFFFFF*Math.random());
+                    // 点渲染模式
+                    const material = new THREE.PointsMaterial({color: colors , size: 0.0045});  // size是点对象像素尺寸
+                    // console.log(colors);
+                    points.material = material;
+                    scene.add(points);
+                });
+            };
+        
+                reader.readAsDataURL(file);
+            }
+        */
+
+        function loadPCDFile(file) {
+            // 将传入的文件对象输出到浏览器的开发者工具控制台。这可以用于查看文件对象的属性和信息，以便进一步处理。
+            console.log(file);
+            // 使用 URL.createObjectURL 方法创建一个包含传入文件的URL。这个URL是一个临时的Blob URL，可以在浏览器中用于加载和显示文件，比如在Three.js场景中加载点云数据。
+            var url = URL.createObjectURL(file);
+            // 将生成的文件URL输出到控制台，以便查看生成的URL
+            console.log(url);
+
+            loader.load(url, function (points) {
+                // 创建一个Three.js的Object3D对象，它是一个基本的容器对象，用于包装其他对象。在这里，它被用作点云的包装对象
+                var pcdWrapper = new THREE.Object3D(); // 创建一个包装对象
+                // 调用center()方法将点云几何体的中心点置于原点。这有助于确保点云的几何体位于场景的中心。
+                points.geometry.center();
+                // 调用rotateX()方法绕X轴旋转点云几何体。这里使用Math.PI将其绕X轴旋转180度，可能用于调整点云的方向
+                points.geometry.rotateX(Math.PI);
+                // 设置点云对象的名称为文件名。这样在Three.js场景中，你可以通过名称来标识和检索这个点云对象。
+                points.name = file.name;
+
+                // 生成随机颜色
+                // var colors = new THREE.Color(0xFFFFFF*Math.random());
+                // console.log(colors);
+
+                // 点渲染模式
+                // const material = new THREE.PointsMaterial({color: colors , size: 0.0045});  // size是点对象像素尺寸
+                // points.material = material;
+
+                // 使用了Three.js库中的 Box3 类来获取点云对象的边界框信息，计算边界框的中心点和尺寸
+                var box = new THREE.Box3().setFromObject(points); // 获取模型的边界框
+                // 创建一个Vector3对象 center，用于存储边界框的中心点。
+                var center = new THREE.Vector3();
+                box.getCenter(center); // 计算中心点
+                var Psize = new THREE.Vector3();
+                // 通过 getSize 方法计算边界框的尺寸，并将结果存储在 Psize 对象中。
+                box.getSize(Psize);
+
+                // 统计点云模型的点数
+                var pointCount = points.geometry.attributes.position.count;
+
+                // 将点云对象 points 添加到 pcdWrapper 包装对象中，并计算一个缩放比例 scale，以确保点云在场景中的显示不会超出一定范围
+                // 将点云对象 points 添加到 pcdWrapper 包装对象中。这样，pcdWrapper 就成为了包含点云的容器，方便在Three.js场景中统一管理。
+                pcdWrapper.add(points); // 将点云添加到包装对象中
+                // 通过 Math.max 方法获取边界框尺寸 (Psize) 在 x、y、z 方向上的最大值。这个值被用作确定点云的最大尺寸
+                var maxlength = Math.max(Psize.x, Psize.y, Psize.z);
+                // 计算一个缩放比例 scale，使得点云的最大尺寸在某个方向上缩放为1。这样可以确保点云在场景中的显示范围受到控制，避免显示过大或过小。
+                var scale = 1 / maxlength;
+
+
+                // 将整个点云模型减去中心点的坐标
+                // 通过 sub 方法，将包装对象 pcdWrapper 的位置调整为原位置减去中心点 center。这样可以使得包装对象位于场景的中心
+                pcdWrapper.position.sub(center);
+                // 通过 set 方法设置包装对象的缩放，将其在每个方向上缩放为 scale。这是为了确保点云的最大尺寸在某个方向上缩放为1。
+                pcdWrapper.scale.set(scale, scale, scale);
+                // 将调整后的包装对象的位置信息输出到浏览器的开发者工具控制台，以便查看和调试。
+                console.log(pcdWrapper.position);
+                scene.add(pcdWrapper);
+
+                var filefolder = gui.addFolder(points.name);
+                filefolder.open(); // 打开一级菜单
+
+                // 通过 dat.GUI 的 add 方法，向 GUI 中添加一个控制器，用于调整缩放比例。{ scale: scale.toFixed(4) } 创建了一个包含 scale 属性的对象，'scale' 指定了要控制的属性，
+                // .name('Scaling') 设置了控制器的名称为 'Scaling'，.listen() 允许 GUI 实时更新该值
+                filefolder.add({ scale: scale.toFixed(4) }, 'scale').name('Scaling').listen();
+                filefolder.add({ pointCount: pointCount }, 'pointCount').name('Pointcount').listen();// 目的是创建一个属性名为 'pointCount'，值为 pointCount 的对象。然后，通过将这个对象作为第一个参数传递给 add 方法
+                // 创建一个用于调整包装对象在 X 轴上位置的控制器。pcdWrapper.position 是一个 Vector3 对象，这里调整的是其 x 属性的值。
+                filefolder.add(pcdWrapper.position, 'x', -1.5, 1.5).name('PositionX');
+                filefolder.add(pcdWrapper.position, 'y', -1.5, 1.5).name('PositionY');
+                filefolder.add(pcdWrapper.position, 'z', -1.5, 1.5).name('PositionZ');
+
+                // 添加一个用于调整点云颜色的控制器。points.material 表示点云的材质， 'color' 是该材质的颜色属性。.name('Pointcolor') 设置了控制器的名称为 'Pointcolor'。.onChange(renderer.render(scene, camera)); 指定了在颜色发生改变时重新渲染场景的回调函数。
+                filefolder.addColor(points.material, 'color').name('Pointcolor').onChange(renderer.render(scene, camera));
+                // 添加一个用于调整点云点的大小的控制器。.name('Pointsize') 设置了控制器的名称为 'Pointsize'。.onChange(renderer.render(scene, camera)); 指定了在点的大小发生改变时重新渲染场景的回调函数。
+                filefolder.add(points.material, 'size', 0.001, 0.01).name('Pointsize').onChange(renderer.render(scene, camera));
+                // 用于控制点云的可见性
+                visible = { enable: true };
+
+                filefolder.add(visible, 'enable').name('show/off').onChange(function (value) { pcdWrapper.visible = value; renderer.render(scene, camera); });
+                folderCount++; // 增加每次读取文件夹时文件的数量
+                folderCountControl.setValue(folderCount);
+
+            });
+        }
+
+
+
+        function handleFiles(files) {
+            for (var i = 0; i < files.length; i++) {
+                console.log(files[i].name); // 在控制台打印文件名
+                loadPCDFile(files[i]);
+                // 在这里进行对文件的操作，比如上传等等
+            }
+        }
+
+        document.getElementById('file-input').addEventListener('change', function (event) {
+            handleFiles(event.target.files);  // 这段代码将监听file-input元素的change事件，并在文件选择发生变化时调用handleFiles函数来处理所选文件。
+        });
+
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function render() {
+            controls.update();
+            cameraHelper.update();
+            renderer.render(scene, camera);
+            requestAnimationFrame(render);
+        }
+
+    </script>
+</body>
+
+</html>

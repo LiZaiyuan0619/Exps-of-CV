@@ -1,0 +1,153 @@
+<html>
+    <head>
+		<style>
+			 body {
+				margin: 0;
+				overflow: visible;
+			}
+	
+			#container {
+    		  position: absolute;
+    		  top: 0;
+    		  left: 0;
+    		  right: 0;
+    		  bottom: 0;
+    		  overflow: visible;
+    		}
+		
+		</style>
+    </head>
+    <body>
+		<!-- <div id="pointCloudInfo1"></div>
+		<div id="pointCloudInfo2"></div>
+		<div id="colorInfo1"></div>
+		<div id="colorInfo2"></div> -->
+		<div id="container"></div>
+
+        <script type="importmap">
+			{
+				"imports": {
+					"three": "./build/three.module.js",
+					"three/addons/": "./examples/jsm/"
+				}
+			}
+		</script>
+        <script type="module">
+            import*as THREE from "three";
+
+            import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+			import { PCDLoader } from 'three/addons/loaders/PCDLoader.js';
+			import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+			
+			const container = document.getElementById('container');
+
+            let camera1, scene, renderer,camera2;
+            renderer= new THREE.WebGLRenderer();
+			renderer.setSize(container.clientWidth, container.clientHeight);
+      		container.appendChild(renderer.domElement);
+			//document.body.appendChild( renderer.domElement );  
+			/* const pointCloudInfoElement1 = document.getElementById('pointCloudInfo1');
+			const pointCloudInfoElement2 = document.getElementById('pointCloudInfo2');
+			const colorInfoElement1 = document.getElementById('colorInfo1');
+			const colorInfoElement2 = document.getElementById('colorInfo2'); */
+			
+
+			scene = new THREE.Scene();
+
+			camera1 = new THREE.PerspectiveCamera( 30, (window.innerWidth/2) / window.innerHeight, 0.01, 40 );//
+			camera1.position.set( 0, 0, 1 );
+			camera2=new THREE.PerspectiveCamera(30, (window.innerWidth/2) / window.innerHeight, 0.01, 2000);
+			camera2.position.set(2,2,2);
+			camera2.lookAt(new THREE.Vector3(0,0,0));
+			scene.add( camera1 );
+			scene.add(camera2);
+			const helper=new THREE.CameraHelper(camera1);
+			scene.add(helper);
+			
+			
+			const controls = new OrbitControls( camera1, renderer.domElement );
+ 
+            const loader=new PCDLoader();
+			let points,pointCount1,color1;
+			
+            loader.load("./Data/ism_test_wolf.pcd",function (loadedpoints) {
+				const material = new THREE.PointsMaterial({
+   					color: 0x00ff00,
+   					size: 0.005
+ 					});
+					points=loadedpoints;
+ 					points.material = material;
+
+ 					points.position.x = 0;
+  					points.position.y = 0;
+  					points.position.z = 0;
+				scene.add( points );
+				const gui = new GUI();
+				gui.add( points.material, 'size', 0.001, 0.04 ).onChange( render );
+				gui.addColor( points.material, 'color' ).onChange( render );
+				gui.open();
+				/* const geometry = points.geometry;
+				pointCount1 = geometry.getAttribute('position').count;
+				color1 = material.color.getHexString(); */
+            });
+			/* pointCloudInfoElement1.innerText = `pointcount1：${pointCount1}`;
+			colorInfoElement1.innerText=`pointcolor1: ${color1}`;
+ */
+			const loader2=new PCDLoader();
+			let points2,pointCount2,color2;
+            loader2.load("./Data/lamppost.pcd",function (loadedpoints) {
+				const material = new THREE.PointsMaterial({
+   					color: 0xff0000,
+   					size: 0.04
+ 					});
+					points2=loadedpoints;
+ 					points2.material = material;
+
+ 					points2.position.x = 0;
+  					points2.position.y = 0;
+  					points2.position.z = 0;
+				scene.add( points2 );
+				/* const geometry = points.geometry;
+				pointCount2 = geometry.getAttribute('position').count;
+				color2 = material.color.getHexString(); */
+            });
+			/* pointCloudInfoElement2.innerText = `pointcount2：${pointCount2}`;
+			colorInfoElement2.innerText=`pointcolor2: ${color2}`;
+ */
+
+ 			
+
+			animate();
+
+
+			function animate(){
+				
+				 if (points) {
+					points.rotation.x+=0.01;
+				} 
+				if (points2) {
+					points2.rotation.z+=0.02;
+				}
+				helper.update();
+				render();
+				/* pointCloudInfoElement1.innerText = `pointcount1：${pointCount1}`;
+				colorInfoElement1.innerText=`pointcolor1: ${color1}`;
+				pointCloudInfoElement2.innerText = `pointcount2：${pointCount2}`;
+				colorInfoElement2.innerText=`pointcolor2: ${color2}`; */
+				requestAnimationFrame(animate);
+			}
+            function render() {
+					renderer.setViewport(0,0, window.innerWidth / 2, window.innerHeight);
+					renderer.setScissor(0, 0, window.innerWidth / 2, window.innerHeight);
+  					renderer.setScissorTest(true);
+                    renderer.render( scene, camera1 );
+					renderer.setViewport(window.innerWidth / 2, 0, window.innerWidth / 2, window.innerHeight);
+					renderer.setScissor(window.innerWidth / 2, 0, window.innerWidth / 2, window.innerHeight);
+  					renderer.setScissorTest(true);
+					renderer.render(scene, camera2);
+                    }
+		
+        	
+        </script>
+    </body>
+</html>

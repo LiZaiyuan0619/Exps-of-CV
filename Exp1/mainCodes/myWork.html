@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>LiYanhcao_Exp1</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <!-- 将外部样式表文件应用到HTML文档中,指定链接文档类型为CSS文件、链接关系stylesheet和链接文件的位置 -->
+    <link type="text/css" rel="stylesheet" href="css/main.css">
+    <style>
+        /* 先将原生的文件输入框隐藏。 */
+        #file-input {
+            display: none;
+        }
+
+        /* 设置绝对定位,将自定义按钮固定在页面右上角 */
+        .button-container {
+            /* 按钮容器设置为绝对定位，使其相对于其最近的已定位祖先元素（如果没有，则相对于文档的初始包含块）进行定位 */
+            position: absolute;
+            bottom: 25px;
+            left: 25px;
+        }
+
+        /* 定义了按钮的样式 */
+        .custom-button {
+            background-color: #63c966;
+            /* 按钮文字的颜色 */
+            color: white;
+            /* 去掉按钮的边框 */
+            border: none;
+            /* 按钮内边距，上下各为 10 像素，左右各为 25 像素 */
+            padding: 10px 25px;
+            /* 文本居中 */
+            text-align: center;
+            /* 没有文字的下划线 */
+            text-decoration: none;
+            /* 按钮设置为行内块级元素，使其可以设置宽度和高度 */
+            display: inline-block;
+            /* 文字的字体大小为 16 像素*/
+            font-size: 20px;
+            /* 鼠标悬停在按钮上时显示为手型光标 */
+            cursor: pointer;
+            /* 按钮的边框半径，使其呈现圆角效果 */
+            border-radius: 4px;
+        }
+
+        .custom-button:hover {
+            /* 当鼠标悬停在按钮上时，按钮的背景颜色变为 #428a46 */
+            background-color: #428a46;
+        }
+
+        #bottom-text {
+            /* 固定定位，使其相对于浏览器窗口固定不动 */
+            position: fixed;
+            /* 元素底部与页面底部对齐 */
+            bottom: 0;
+            /* 元素的宽度设置为100%，使其横跨整个页面 */
+            width: 100%;
+            /* 将背景颜色设置为透明 */
+            background-color: transparent;
+            /* 元素的内边距为10像素 */
+            padding: 10px;
+            /* 居中对齐元素内部文本 */
+            text-align: center;
+            /* 水平居中对齐 */
+            align-items: center;
+            /* 垂直居中对齐 */
+            padding-left: 20px;
+            /* 添加左侧内边距 */
+            padding-right: 20px;
+            /* 添加右侧内边距 */
+            padding-bottom: 20px;
+            /* 添加下侧内边距 */
+            font-size: 16px;
+            color: white;
+        }
+
+        /* 鼠标hover在infocontain上显示具体内容 */
+        #infocontain {
+            position: absolute;
+            top: 20px;
+            left: 50px;
+            width: 100px;
+            height: 30px;
+            /* 设置元素的边框半径为5像素，使其拥有圆角 */
+            border-radius: 5px;
+            /* 设置元素的背景颜色为RGB值 (44, 1, 76)。这是一种深紫色。 */
+            background-color: rgb(243, 243, 243);
+            color: rgb(0, 0, 0);
+            /* 文本的字体大小为15像素 */
+            font-size: 15px;
+            /* 文本水平居中对齐 */
+            text-align: center;
+            /* 元素的行高为0像素。这可能是为了确保文本垂直居中，因为高度只有30像素，而行高为0，意味着文本将垂直居中在这个相对较小的容器内 */
+            line-height: 0px;
+        }
+
+        /* 使用了伪类 :hover，它表示鼠标悬停在 #infocontain 元素上时应用的样式。*/
+        /* #infocontain:hover：这表示当鼠标悬停在 #infocontain 元素上时应用的样式 */
+        /* #useinfo：这是一个子选择器，表示选择 #infocontain 元素下的具有 id 为 "useinfo" 的子元素。 */
+        #infocontain:hover #useinfo {
+            /* 将 #useinfo 元素的显示属性设置为块级元素。这样，当鼠标悬停在 #infocontain 元素上时，#useinfo 元素将变为可见。 */
+            display: block;
+            /* 为悬停效果添加了一个动画，持续时间为0.5秒。这个 all 值表示所有 CSS 属性都将受到动画的影响。这可能是为了使显示或隐藏的过渡看起来更平滑 */
+            animation: 0.5s all;
+        }
+
+        /* 为 #useinfo 元素创建一个相对定位、半透明、带有圆角、居中显示的弹出框。在默认状态下，它是不可见的，但在鼠标悬停在 #infocontain 元素上时，通过设置 display: block;
+     以及添加了一个悬停效果的动画，它将变得可见 */
+        #useinfo {
+            /* 相对定位，使其相对于其正常位置进行定位。 */
+            position: relative;
+            /* 初始时隐藏元素，none值表示不显示 */
+            display: none;
+            width: 250px;
+            background-color: rgba(255, 255, 255, 0.8);
+            /* 元素的顶部相对于其包含块的顶部位置移动到200%的距离 */
+            top: 200%;
+            /* 设置元素的边框半径为10像素，使其呈现圆角效果 */
+            border-radius: 10px;
+            /* 元素的左侧相对于其包含块的左侧位置移动到80像素的距离 */
+            left: 100px;
+            /* 通过 transform 属性，将元素向左和向上移动，使其相对于其自身的中心点居中。这是通过使用百分比单位相对于元素的宽度和高度。 */
+            transform: translate(-50%, -50%);
+            text-align: left;
+            /* 设置元素的堆叠顺序，使其处于其他元素之上。 */
+            z-index: 1;
+            /* 元素的行高为18像素 */
+            line-height: 18px;
+            padding: 20px;
+        }
+    </style>
+    <script src="js/three.js"></script>
+    <script src="js/OrbitControls.js"></script>
+    <script src="js/PCDLoader.js"></script>
+    <script src="js/dat.gui.js"></script>
+    <script src="js/stats.min.js"></script>
+
+</head>
+
+<body>
+    <!-- 包装文件输入元素和自定义按钮。 -->
+    <div class="button-container">
+        <!-- 文件输入元素，用于选择.pcd文件，支持多选 -->
+        <!-- 用户可以通过点击按钮或者直接点击这个输入元素来选择.pcd文件。accept=".pcd" 属性指定了该输入元素只接受具有 .pcd 扩展名的文件。multiple 属性允许用户选择多个文件。 -->
+        <input type="file" id="file-input" accept=".pcd" multiple>
+        <!-- 触发文件选择对话框的自定义按钮 -->
+        <!-- 点击这个按钮会调用 openFileDialog 函数，触发文件选择对话框。 -->
+        <button class="custom-button" onclick="openFileDialog()">选择文件</button>
+    </div>
+    <div id="bottom-text">
+        2022090902007 | 李艳超 | 实验一
+    </div>
+    <!-- 这是一个具有 id 为 "infocontain" 的 <div> 元素，用于包装关于使用说明的内容。 -->
+    <div id="infocontain">
+        <p>说明</p>
+        <!-- 具有 id 为 "useinfo" 的 <div> 元素，包含更详细的使用说明内容。 -->
+        <div id="useinfo">
+            <!-- 这些都只是显示一个文本说明 -->
+            <p>1. 左键旋转、滚轮缩放、右键平移</p>
+            <p>2. 左下角可以添加多个本地的*.pcd</p>
+            <p>3. 右上角可以调节已加载点云</p>
+            <p>4. 右下角显示帧率等内容</p>
+        </div>
+    </div>
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "./js/three.module.js"
+          }
+        }
+      </script>
+    <script>
+        // THREE.Object3D 是 Three.js 中表示三维对象的抽象基类，后面会继承它来创建具体的三维对象
+        // 其实就是提供了一个包含位置、旋转和缩放等属性的容器，可以用来控制对象在三维空间中位置和姿态
+        const parent = new THREE.Object3D();
+
+        let camera, addcamera, scene, renderer;
+        let camera2, camera3, camera4, camera5, camera6, camera7;
+        let cameraHelper;
+        let controls, loader, gui;
+        let folderCount = 0;
+        let folderCountControl;
+        let visible;
+
+        init();
+        animate();
+        render();
+
+        function init() {
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            // 设置渲染器的像素比例为当前设备
+            renderer.setPixelRatio(window.devicePixelRatio);
+            // 设置渲染器填充整个窗口
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            // 将渲染器添加到HTML文档的body中以显示
+            document.body.appendChild(renderer.domElement);
+
+            scene = new THREE.Scene();
+            scene.add(parent);
+
+            var ambientLight = new THREE.AmbientLight(0xe0e0e); // 使用灰色环境光
+            scene.add(ambientLight);
+
+            // // 添加平行光
+            var directionalLight = new THREE.DirectionalLight(0xffffff, 10); // 白色光源，强度为1
+            directionalLight.position.set(0, 0, 300).normalize(); // 设置光源方向（正规化向量）
+            scene.add(directionalLight);
+            // // 添加坐标轴
+            // // AxisHelper坐标轴的辅助器，100坐标轴在场景中的长度，坐标轴辅助器通常用于可视化场景中的坐标轴方向，以帮助理解场景的空间布局
+            // axesHelper = new THREE.AxisHelper(100);
+            // //显示网格，xyz平面
+            // gridHelper = new THREE.GridHelper(10, 100);
+
+
+            // 创建 XY 平面的平面几何体
+            var planeGeometry = new THREE.PlaneBufferGeometry(10, 10);
+            // 创建 XY 平面的网格材质
+            var planeMaterial = new THREE.MeshBasicMaterial({ color: 0xCCCCCC, side: THREE.DoubleSide });
+            // 创建 XY 平面的网格对象
+            var planeMesh = new THREE.Mesh(planeGeometry, planeMaterial);
+            // 设置平面对象在场景中的旋转，使其与 XY 平面平行
+            planeMesh.rotation.x = Math.PI / 2;
+            // 将平面对象添加到场景中
+            scene.add(planeMesh);
+
+            // 创建 XY 平面的网格辅助器
+            var gridHelper = new THREE.GridHelper(1000, 100, 0x888888, 0x444444);
+            // 设置网格辅助器在 XY 平面上
+            gridHelper.rotation.x = Math.PI / 2;
+            // 将网格辅助器添加到场景中
+            scene.add(gridHelper);
+            // 添加坐标轴辅助器
+            var axesHelper = new THREE.AxesHelper(100);
+            scene.add(axesHelper);
+
+            // 函数参数：视场角（垂直方向可见范围）为45度，视图宽高比（水平相对于垂直范围的比例），相机到视锥体近端距离，相机到视锥体远端距离（只有在这两个距离之间对象才不会被裁剪）
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 5, 1000);
+            camera.position.set(100, 100, 100);
+            camera.lookAt(scene.position);
+            scene.add(camera);
+
+            // 创建了一个新的Three.js透视相机（THREE.PerspectiveCamera），设置了其位置、视场角、远近裁剪面，并创建了一个相机助手（THREE.CameraHelper）用于可视化该相机的视锥体
+            addcamera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 10000);
+            addcamera.position.set(0, 0, 200);
+            addcamera.lookAt(new THREE.Vector3(0, 0, 0)); // 设置辅助相机的目标点为点云的中心点
+            // 创建一个相机助手，用于可视化相机的视锥体。
+            cameraHelper = new THREE.CameraHelper(addcamera);
+            scene.add(cameraHelper);
+
+            // addcamera2 = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 10000);
+            // addcamera2.position.set(0, 0, -100);
+            // addcamera2.lookAt(new THREE.Vector3(0, 0, 0)); // 设置辅助相机的目标点为点云的中心点
+            // // 创建一个相机助手，用于可视化相机的视锥体。
+            // cameraHelper2 = new THREE.CameraHelper(addcamera2);
+            // scene.add(cameraHelper2);
+
+            // addcamera3 = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 10000);
+            // addcamera3.position.set(0, -100, 0);
+            // addcamera3.lookAt(new THREE.Vector3(0, 0, 0)); // 设置辅助相机的目标点为点云的中心点
+            // // 创建一个相机助手，用于可视化相机的视锥体。
+            // cameraHelper3 = new THREE.CameraHelper(addcamera3);
+            // scene.add(cameraHelper3);
+
+            // addcamera4 = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 10000);
+            // addcamera4.position.set(0, 100, 0);
+            // addcamera4.lookAt(new THREE.Vector3(0, 0, 0)); // 设置辅助相机的目标点为点云的中心点
+            // // 创建一个相机助手，用于可视化相机的视锥体。
+            // cameraHelper4 = new THREE.CameraHelper(addcamera4);
+            // scene.add(cameraHelper4);
+
+            // addcamera5 = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 10000);
+            // addcamera5.position.set(0, 100, 0);
+            // addcamera5.lookAt(new THREE.Vector3(0, 0, 0)); // 设置辅助相机的目标点为点云的中心点
+            // // 创建一个相机助手，用于可视化相机的视锥体。
+            // cameraHelper5 = new THREE.CameraHelper(addcamera5);
+            // scene.add(cameraHelper5);
+
+            // addcamera6 = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 10000);
+            // addcamera6.position.set(0, -100, 0);
+            // addcamera6.lookAt(new THREE.Vector3(0, 0, 0)); // 设置辅助相机的目标点为点云的中心点
+            // // 创建一个相机助手，用于可视化相机的视锥体。
+            // cameraHelper6 = new THREE.CameraHelper(addcamera6);
+            // scene.add(cameraHelper6);
+
+
+
+            // camera helper
+            camera2 = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 5, 50);
+            helper = new THREE.CameraHelper(camera2);
+            scene.add(helper);
+            parent.add(helper);
+
+            camera3 = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 5, 50);
+            helper2 = new THREE.CameraHelper(camera3);
+            scene.add(helper2);
+            parent.add(helper2);
+
+            camera4 = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 5, 50);
+            helper4 = new THREE.CameraHelper(camera4);
+            scene.add(helper4);
+            parent.add(helper4);
+
+            camera5 = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 5, 50);
+            helper5 = new THREE.CameraHelper(camera5);
+            scene.add(helper5);
+            parent.add(helper5);
+
+            camera6 = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 5, 50);
+            helper6 = new THREE.CameraHelper(camera6);
+            scene.add(helper6);
+            parent.add(helper6);
+
+            camera7 = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 5, 50);
+            helper7 = new THREE.CameraHelper(camera7);
+            scene.add(helper7);
+            parent.add(helper7);
+
+            // 鼠标交互
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            // 启用了自动旋转功能，并设置了旋转的速度
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 2;
+            // 垂直旋转的角度范围，限制了相机的仰角
+            // controls.minPolarAngle = 0;
+            // controls.maxPolarAngle = Math.PI / 2;
+            // 为控制器添加了一个事件监听器，控制器发生变化时触发change事件，并调用render函数
+            controls.addEventListener('change', render);
+
+            loader = new THREE.PCDLoader();
+            // 创建共享的GUI对象，简单的用户界面
+            gui = new dat.GUI();
+            // gui一开始就可见
+            gui.open();
+            // 创建了一个名为folderCountControl的控件，它允许用户调整一个名为folderCount的属性，初始值为3。gui.add方法用于将属性添加到GUI中，name方法用于设置GUI中显示的名称
+            folderCountControl = gui.add({ folderCount: 3 }, 'folderCount').name('Foldercount');  //folderCount的属性，并将其初始值设置为0。然后，使用gui.add方法将该属性添加到GUI中
+
+            gui.domElement.style.top = '80px'; // 设置距离顶部的像素数
+            gui.domElement.style.right = '25px'; // 设置距离左侧的像素数
+
+
+
+            // 创建控制器参数
+            const params = {
+                Point1_Size: 0.5,
+                Point1_Color: 0xff0000,
+                Point2_Size: 0.5,
+                Point2_Color: 0xb7ff,
+                Point3_Size: 0.5,
+                Point3_Color: 0xff21
+            };
+
+            // 点云模型1
+            const loader1 = new THREE.PCDLoader();
+            loader1.load('image/ism_test_horse.pcd', function (points) {
+                points.scale.set(0.5, 0.5, 0.5)
+
+                // 将点云模型添加到场景和父对象中
+                points.position.set(100, 0, 0);
+                scene.add(points);
+                parent.add(points);
+
+                let pointController1 = gui.addFolder("Horse");
+                // 添加了两个滑块控制器：一个滑块用于调整点的大小，一个颜色选择器用于调整点的颜色。
+                // 函数参数：控制器参数 控制参数名 滑块的最小值 滑块的最大值
+                pointController1.add(params, 'Point1_Size', 0.01, 1).onChange(function (value) {
+                    points.material.size = value;
+                    points.material.needsUpdate = true;
+                });
+                pointController1.addColor(params, 'Point1_Color').onChange(function (value) {
+                    points.material.color.set(value);
+                    points.material.needsUpdate = true;
+                });
+                // 调整点云的初始大小和颜色
+                points.material.size = params.Point1_Size;
+                points.material.color.set(params.Point1_Color);
+
+                // 获取点云模型的包围盒
+                boundingBox = new THREE.Box3().setFromObject(points);
+
+                // 计算点云模型的中心位置
+                center = new THREE.Vector3();
+                boundingBox.getCenter(center);
+
+
+                // 设置相机的位置和观察目标
+                camera2.position.set(center.x + 50, center.y + 50, center.z + 50);
+                camera2.lookAt(center);
+
+                camera3.position.set(center.x - 50, center.y - 50, boundingBox.max.z + 50);
+                camera3.lookAt(center);
+
+                // 添加一个控制项来控制点云的可见性
+                const visibilityControl = gui.add({ visible: true }, 'visible').name('Point Cloud Visibility');
+                visibilityControl.onChange(function (value) {
+                    points.visible = value;
+                });
+
+                render();
+
+            }, function (error) {
+                console.log('error');
+            });
+
+            const loader2 = new THREE.PCDLoader();
+            loader2.load('image/ism_test_cat.pcd', function (points) {
+                points.scale.set(0.25, 0.25, 0.25)
+                points.position.set(-100, 0, 0);
+                scene.add(points);
+                parent.add(points);
+
+                let pointController2 = gui.addFolder("Cat");
+                pointController2.add(params, 'Point2_Size', 0.01, 1).onChange(function (value) {
+                    points.material.size = value;
+                    points.material.needsUpdate = true;
+                });
+                pointController2.addColor(params, 'Point2_Color').onChange(function (value) {
+                    points.material.color.set(value);
+                    points.material.needsUpdate = true;
+                });
+
+                points.material.size = params.Point2_Size;
+                points.material.color.set(params.Point2_Color);
+
+                // 获取点云模型的包围盒
+                boundingBox = new THREE.Box3().setFromObject(points);
+
+                // 计算点云模型的中心位置
+                center = new THREE.Vector3();
+                boundingBox.getCenter(center);
+
+                // 设置相机的位置和观察目标
+                camera4.position.set(center.x + 50, center.y + 50, center.z + 50);
+                camera4.lookAt(center);
+
+                camera5.position.set(center.x - 50, center.y - 50, boundingBox.max.z + 50);
+                camera5.lookAt(center);
+
+                // 添加一个控制项来控制点云的可见性
+                const visibilityControl = gui.add({ visible: true }, 'visible').name('Point Cloud Visibility');
+                visibilityControl.onChange(function (value) {
+                    points.visible = value;
+                });
+
+                render();
+
+
+            }, function (error) {
+                console.log('error');
+            });
+
+            // 点云模型1
+            const loader3 = new THREE.PCDLoader();
+            loader3.load('image/ism_test_wolf.pcd', function (points) {
+                points.scale.set(0.5, 0.5, 0.5)
+
+                // 将点云模型添加到场景和父对象中
+                points.position.set(0, 0, 0);
+                scene.add(points);
+                parent.add(points);
+
+                let pointController3 = gui.addFolder("Wolf");
+                // 添加了两个滑块控制器：一个滑块用于调整点的大小，一个颜色选择器用于调整点的颜色。
+                // 函数参数：控制器参数 控制参数名 滑块的最小值 滑块的最大值
+                pointController3.add(params, 'Point3_Size', 0.01, 1).onChange(function (value) {
+                    points.material.size = value;
+                    points.material.needsUpdate = true;
+                });
+                pointController3.addColor(params, 'Point3_Color').onChange(function (value) {
+                    points.material.color.set(value);
+                    points.material.needsUpdate = true;
+                });
+
+                // 调整点云的初始大小和颜色
+                points.material.size = params.Point3_Size;
+                points.material.color.set(params.Point3_Color);
+
+                // 获取点云模型的包围盒
+                boundingBox = new THREE.Box3().setFromObject(points);
+
+                // 计算点云模型的中心位置
+                center = new THREE.Vector3();
+                boundingBox.getCenter(center);
+
+
+                // 设置相机的位置和观察目标
+                camera6.position.set(center.x + 50, center.y + 50, center.z + 50);
+                camera6.lookAt(center);
+
+                camera7.position.set(center.x - 50, center.y - 50, boundingBox.max.z + 50);
+                camera7.lookAt(center);
+
+                // 添加一个控制项来控制点云的可见性
+                const visibilityControl = gui.add({ visible: true }, 'visible').name('Point Cloud Visibility');
+                visibilityControl.onChange(function (value) {
+                    points.visible = value;
+                });
+
+                render();
+
+            }, function (error) {
+                console.log('error');
+            });
+
+
+            //显示页面的性能统计信息，包括帧率
+            stat = new Stats();
+            stat.domElement.style.position = 'absolute';
+            stat.domElement.style.right = '0px';
+            stat.domElement.style.bottom = '0px';
+            document.body.appendChild(stat.domElement);
+
+
+
+            window.addEventListener('resize', onWindowResize);
+
+        }
+
+        function onWindowResize() {
+
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+
+            render();
+
+        }
+
+        function animate() {
+            controls.update();
+            cameraHelper.update();
+            render();
+            requestAnimationFrame(animate);
+
+        }
+
+        function render() {
+
+            // parent.rotation.x += 0.01;
+            // parent.rotation.y += 0.01;
+            // parent.rotation.z += 0.01;
+            renderer.render(scene, camera);
+            stat.update();
+        }
+        // 定义了一个名为 openFileDialog 的函数，该函数用于触发文件选择对话框，允许用户选择本地文件
+        function openFileDialog() {
+            // 获取具有id为'file-input'的文件输入元素。这个元素通常是一个 <input type="file"> 元素，用于让用户选择本地文件
+            var fileInput = document.getElementById('file-input');
+            fileInput.multiple = true; // 添加此行以支持选择多个文件
+            // 触发文件输入元素的点击事件。这样会弹出文件选择对话框，让用户选择文件。
+            fileInput.click();
+        }
+
+        // 将 openFileDialog 函数绑定到全局对象 window 上，使得该函数可以在全局范围内被访问
+        // 可以在页面的任何其他地方使用 window.openFileDialog() 调用 openFileDialog 函数，而不仅仅限于某个特定的作用域。
+        // 通常情况下，将函数绑定到 window 对象上是为了在整个页面范围内共享该函数。
+        window.openFileDialog = openFileDialog;
+
+        // 函数接受一个文件对象 file 作为参数，通常是通过文件输入框选择的用户上传的点云数据文件
+        function loadPCDFile(file) {
+
+            // console.log 输出文件对象和通过 URL.createObjectURL 方法创建的临时 Blob URL。这个 URL 将用于在 Three.js 场景中加载和显示点云数据。
+            // 将传入的文件对象输出到浏览器的开发者工具控制台。这可以用于查看文件对象的属性和信息，以便进一步处理。
+            console.log(file);
+            // 使用 URL.createObjectURL 方法创建一个包含传入文件的URL。这个URL是一个临时的Blob URL，可以在浏览器中用于加载和显示文件，比如在Three.js场景中加载点云数据。
+            var url = URL.createObjectURL(file);
+            // 将生成的文件URL输出到控制台，以便查看生成的URL
+            console.log(url);
+
+            // 使用 loader.load 方法加载点云数据。加载完成后，通过回调函数处理加载的点云数据。
+            // points 是包含了加载的点云数据的对象，可以在这个回调函数中对点云进行进一步的操作和处理。
+            loader.load(url, function (points) {
+                // 创建一个Three.js的Object3D对象，它是一个基本的容器对象，用于包装其他对象。在这里，它被用作点云的包装对象
+                var pcdWrapper = new THREE.Object3D(); // 创建一个包装对象
+                // 调用center()方法将点云几何体的中心点置于原点。这有助于确保点云的几何体位于场景的中心。
+                points.geometry.center();
+                // // 调用rotateX()方法绕X轴旋转点云几何体。这里使用Math.PI将其绕X轴旋转180度，可能用于调整点云的方向
+                // points.geometry.rotateX(Math.PI);
+                // 设置点云对象的名称为文件名。这样在Three.js场景中，你可以通过名称来标识和检索这个点云对象。
+                points.name = file.name;
+
+                // 生成随机颜色
+                // var colors = new THREE.Color(0xFFFFFF*Math.random());
+                // console.log(colors);
+
+                // 点渲染模式
+                // const material = new THREE.PointsMaterial({color: colors , size: 0.0045});  // size是点对象像素尺寸
+                // points.material = material;
+
+                // 使用了Three.js库中的 Box3 类来获取点云对象的边界框信息，计算边界框的中心点和尺寸
+                var box = new THREE.Box3().setFromObject(points); // 获取模型的边界框
+                // 创建一个Vector3对象 center，用于存储边界框的中心点。
+                var center = new THREE.Vector3();
+                box.getCenter(center); // 计算中心点
+                var Psize = new THREE.Vector3();
+                // 通过 getSize 方法计算边界框的尺寸，并将结果存储在 Psize 对象中。
+                box.getSize(Psize);
+
+                // 统计点云模型的点数
+                var pointCount = points.geometry.attributes.position.count;
+
+                // 将点云对象 points 添加到 pcdWrapper 包装对象中。这样，pcdWrapper 就成为了包含点云的容器，方便在Three.js场景中统一管理。
+                pcdWrapper.add(points); // 将点云添加到包装对象中
+                // // 通过 Math.max 方法获取边界框尺寸 (Psize) 在 x、y、z 方向上的最大值。这个值被用作确定点云的最大尺寸
+                // var maxlength = Math.max(Psize.x, Psize.y, Psize.z);
+                // // 计算一个缩放比例 scale，使得点云的最大尺寸在某个方向上缩放为1。这样可以确保点云在场景中的显示范围受到控制，避免显示过大或过小。
+                // var scale = 1 / maxlength;
+
+                // 将整个点云模型减去中心点的坐标
+                // 通过 sub 方法，将包装对象 pcdWrapper 的位置调整为原位置减去中心点 center。这样可以使得包装对象位于场景的中心
+                pcdWrapper.position.sub(center);
+                // // 通过 set 方法设置包装对象的缩放，将其在每个方向上缩放为 scale。这是为了确保点云的最大尺寸在某个方向上缩放为1。
+                // pcdWrapper.scale.set(scale, scale, scale);
+                // 将调整后的包装对象的位置信息输出到浏览器的开发者工具控制台，以便查看和调试。
+                console.log(pcdWrapper.position);
+                scene.add(pcdWrapper);
+
+                var filefolder = gui.addFolder(points.name);
+                filefolder.open(); // 打开一级菜单
+
+                // 通过 dat.GUI 的 add 方法，向 GUI 中添加一个控制器，用于调整缩放比例。{ scale: scale.toFixed(4) } 创建了一个包含 scale 属性的对象，'scale' 指定了要控制的属性，
+                // .name('Scaling') 设置了控制器的名称为 'Scaling'，.listen() 允许 GUI 实时更新该值
+                //  scale: scale.toFixed(4) }创建一个包含 scale 属性的对象，该属性的初始值是通过 scale.toFixed(4) 方法取得的缩放比例，并四舍五入保留四位小数
+                // 'scale' 指定了要控制的属性，这里是 scale 属性
+                // .name('Scaling') 设置了控制器的名称为 'Scaling'。
+                // .listen() 允许 GUI 实时更新该值。这表示当用户通过 GUI 调整了缩放比例的值时，GUI 会及时反映这个变化，并调用相应的回调函数。
+                // filefolder.add({ scale: 1 }, 'scale').name('Scaling').listen();
+                filefolder.add({ pointCount: pointCount }, 'pointCount').name('Pointcount').listen();// 目的是创建一个属性名为 'pointCount'，值为 pointCount 的对象。然后，通过将这个对象作为第一个参数传递给 add 方法
+                // 创建一个用于调整包装对象在 X 轴上位置的控制器。pcdWrapper.position 是一个 Vector3 对象，这里调整的是其 x 属性的值。
+                filefolder.add(pcdWrapper.position, 'x', -100, 100).name('X');
+                filefolder.add(pcdWrapper.position, 'y', -100, 100).name('Y');
+                filefolder.add(pcdWrapper.position, 'z', -100, 100).name('Z');
+
+                // 添加一个用于调整点云颜色的控制器。points.material 表示点云的材质， 'color' 是该材质的颜色属性。.name('Pointcolor') 设置了控制器的名称为 'Pointcolor'。.onChange(renderer.render(scene, camera)); 指定了在颜色发生改变时重新渲染场景的回调函数。
+                filefolder.addColor(points.material, 'color').name('Pointcolor').onChange(renderer.render(scene, camera));
+                // 添加一个用于调整点云点的大小的控制器。.name('Pointsize') 设置了控制器的名称为 'Pointsize'。.onChange(renderer.render(scene, camera)); 指定了在点的大小发生改变时重新渲染场景的回调函数。
+                filefolder.add(points.material, 'size', 0.01, 1).name('Pointsize').onChange(renderer.render(scene, camera));
+                // 用于控制点云的可见性
+                visible = { enable: true };
+
+                // 添加的GUI控制属性名是enable，用来控制visible的bool，在GUI显示的标签是show/off'，
+                // .onChange()函数 指定当用户更改控制项的值时要执行的匿名函数——pcdWrapper.visible 被设置为用户选择的值，然后调用 renderer.render(scene, camera) 来重新渲染场景
+                filefolder.add(visible, 'enable').name('show/off').onChange(function (value) { pcdWrapper.visible = value; renderer.render(scene, camera); });
+                folderCount++; // 增加每次读取文件夹时文件的数量
+                folderCountControl.setValue(folderCount);
+
+            });
+        }
+
+
+
+        function handleFiles(files) {
+            for (var i = 0; i < files.length; i++) {
+                console.log(files[i].name); // 在控制台打印文件名
+                loadPCDFile(files[i]);
+                // 在这里进行对文件的操作，比如上传等等
+            }
+        }
+
+        document.getElementById('file-input').addEventListener('change', function (event) {
+            handleFiles(event.target.files);  // 这段代码将监听file-input元素的change事件，并在文件选择发生变化时调用handleFiles函数来处理所选文件。
+        });
+
+        // 注册了一个事件监听器，当浏览器窗口大小发生改变时触发指定的函数 onWindowResize
+        // window.addEventListener('resize', ...)：这是添加一个事件监听器，监听窗口大小改变事件。当浏览器窗口大小发生改变时，会触发 resize 事件。
+        window.addEventListener('resize', onWindowResize);
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,404 @@
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- <head> 元素：
+    用于包含文档的元信息，如标题、字符集声明、样式表链接、脚本等。
+    不直接显示在浏览器窗口中，而是提供有关文档的信息和指示。
+    通常包括 <title> 元素，该元素定义了文档的标题，会显示在浏览器的标题栏或标签页上。
+    -->
+    <!-- 
+    <body> 元素：
+    包含文档的实际内容，如文本、图像、链接等。
+    显示在浏览器窗口中，是用户直接看到和与之交互的部分。
+     -->
+    <title>LiZaiyuan_Exp1</title>
+</head>
+<style>
+    /* 本部分包含了CSS规则 */
+/* 
+在 <style> 部分，类似于 #contain {} 的选择器是用于选择具有指定 id 属性的 HTML 元素，并对其应用样式规则。
+    这样的选择器通常用于为特定的页面元素定义样式，以达到美化、布局或其他视觉效果的目的
+在 HTML（Hypertext Markup Language）中，每个元素都可以有一个唯一的标识符，这个标识符称为 "id" 属性。
+"id" 属性是用于在文档中唯一标识一个元素的字符串。
+
+当你在 HTML 中创建元素时，你可以通过添加 "id" 属性为该元素指定一个唯一的标识符。例如：
+
+```html
+<div id="myDiv">This is a div element with the id "myDiv"</div>
+```
+
+在这个例子中，`<div>` 元素被赋予了一个 "id" 属性，其值为 "myDiv"。这个 "id" 属性的值必须是唯一的，不同的元素不能拥有相同的 "id"。
+
+CSS 中使用选择器来选择具有特定 "id" 属性的 HTML 元素。选择器以 "#" 符号开始，后面跟着 "id" 的值。例如，如果要选择上述 `<div>` 元素，可以使用以下 CSS 规则：
+
+```css
+#myDiv {
+    color: blue;
+}
+```
+
+这表示选择具有 "id" 为 "myDiv" 的元素，并将其文本颜色设置为蓝色。
+因为 "id" 必须在文档中是唯一的，这样的选择器通常用于定位和样式化特定的 HTML 元素。
+
+在给定的例子中，这个元素是一个 <div> 元素，其具体作用取决于它的内容以及它在网页的上下文中的位置。
+    在HTML中，<div> 元素通常用作容器，用于组织和包裹其他 HTML 元素，从而方便样式化和布局。
+
+html
+<div id="myDiv">This is a div element with the id "myDiv"</div>
+在这个例子中，<div> 元素带有 "id" 属性，其值为 "myDiv"。这个元素的作用可能包括：
+
+容器和组织： <div> 元素用于组织页面结构。它可以包含文本、图像、其他嵌套的 <div> 元素等。"id" 属性使得可以通过 CSS 或 JavaScript 选择和操作这个特定的 <div> 元素。
+
+样式化： 通过指定 "id" 属性，可以为这个 <div> 元素定义特定的样式规则。在给定的例子中，可能会在 CSS 中找到类似于 #myDiv { color: blue; } 的规则，将文本颜色设置为蓝色。
+
+JavaScript 操作： 在 JavaScript 中，可以通过文档对象模型（DOM） API 选择并操作具有特定 "id" 的元素。例如，通过 document.getElementById('myDiv') 可以获取对这个 <div> 元素的引用，并进行动态修改。
+*/
+
+    /* 表示对 HTML 文档中 <body> 元素的样式规则。具体而言，body 是一个选择器，它选择了文档中的 <body> 元素，并允许你定义该元素的样式 
+    
+    <body> 元素是HTML文档的主体部分，包含了文档的实际内容，这些内容将会在浏览器窗口中显示给用户。在HTML结构中，<body> 元素包括了网页的主要内容，如文本、图像、链接、表格、表单等。    */
+    body {
+        /* body元素的外边距设置为0。外边距是元素与其周围元素之间的空间,简单说就是页面内哦让那个紧密贴近到浏览器窗口边缘 */
+        margin: 0;
+        /* body元素的内边距设置为0。内边距是元素内容与元素边界之间的空间，就是去除页面主体内容周围的空白区域，页面内容紧密地贴近 <body> 元素的边缘*/
+        padding: 0;
+        /* 隐藏body元素的溢出内容。如果页面的内容超出body元素的框，将隐藏溢出浏览器视口的<body> 内容而不显示滚动条。 */
+        overflow: hidden;
+        /* 将body元素中的文本内容水平居中对齐。 */
+        text-align: center;
+        font-size: 16px; /* 设置文本基础字体大小 */
+        line-height: 1.6; /* 设置文本行高，相对于字体大小的倍数 */
+        color: #ffffff; /* 设置文本颜色为深灰色 */
+        background-color: #000000; /* 设置背景颜色为浅灰色 */
+    }
+
+    /* #webgl：这是一个 CSS 选择器，表示选择具有 id 为 "webgl" 的 HTML 元素。在HTML中，一个元素的 id 属性是唯一的，因此使用 # 符号后跟 id 的值，可以选择特定的元素 */
+    #webgl {
+        /* 将选中的 #webgl 元素的宽度设置为父容器的100%。这意味着该元素将占据其父容器的整个宽度，从而填充可用空间。 */
+        width: 100%;
+    }
+
+    /* 创建一个相对定位的元素，具有一些内外边距，圆角边框，粗体文本，颜色设置以及一个带有阴影效果的外观。它的样式使得这个元素在页面上相对窄，且具有一些视觉上的装饰效果。 */
+    #contain {
+        /* 将元素的定位方式设置为相对定位。这意味着元素将相对于其正常位置进行偏移，但不会脱离文档流 */
+        position: relative;
+        /* 设置元素的内边距。在这里，上下边距为5像素，左右边距为0像素。 */
+        padding: 5px 0px;
+        /* 设置元素的底部外边距为20像素。这将在元素的下方留出一些空间 */
+        margin-bottom: 20px;
+        /* 将元素的宽度设置为其包含块宽度的20%。这使得元素相对于其包含块相对较窄。 */
+        width: 20%;
+        /* 相对于包含块，将元素的左边缘向右偏移40%。这样可以在水平方向上调整元素的位置。 */
+        left: 40%;
+        /* 将文本的字重设置为粗体 */
+        font-weight: bold;
+        /* 设置元素的边框半径为5像素，使其拥有圆角 */
+        border-radius: 5px;
+        /* 设置文本颜色为RGB值 (50, 0, 106)。这是一种深紫色。 */
+        color: rgb(255, 255, 255);
+        /* 为元素添加一个阴影效果。这个阴影是一个10像素偏移，没有水平或垂直的偏移，模糊半径为10像素，颜色为半透明的黑色。*/
+        box-shadow: 0 0 10px 0 rgba(252, 0, 0, 0.5);
+    }
+
+    /* 鼠标hover在infocontain上显示具体内容 */
+    #infocontain {
+        position: absolute;
+        top: 20px;
+        left: 50px;
+        width: 100px;
+        height: 30px;
+        /* 设置元素的边框半径为5像素，使其拥有圆角 */
+        border-radius: 5px;
+        /* 设置元素的背景颜色为RGB值 (44, 1, 76)。这是一种深紫色。 */
+        background-color: rgb(243, 243, 243);
+        color: rgb(0, 0, 0);
+        /* 文本的字体大小为15像素 */
+        font-size: 15px;
+        /* 文本水平居中对齐 */
+        text-align: center;
+        /* 元素的行高为0像素。这可能是为了确保文本垂直居中，因为高度只有30像素，而行高为0，意味着文本将垂直居中在这个相对较小的容器内 */
+        line-height: 0px;
+    }
+
+    /* 使用了伪类 :hover，它表示鼠标悬停在 #infocontain 元素上时应用的样式。*/
+    /* #infocontain:hover：这表示当鼠标悬停在 #infocontain 元素上时应用的样式 */
+    /* #useinfo：这是一个子选择器，表示选择 #infocontain 元素下的具有 id 为 "useinfo" 的子元素。 */
+    #infocontain:hover #useinfo {
+        /* 将 #useinfo 元素的显示属性设置为块级元素。这样，当鼠标悬停在 #infocontain 元素上时，#useinfo 元素将变为可见。 */
+        display: block;
+        /* 为悬停效果添加了一个动画，持续时间为0.5秒。这个 all 值表示所有 CSS 属性都将受到动画的影响。这可能是为了使显示或隐藏的过渡看起来更平滑 */
+        animation: 0.5s all;
+    }
+
+    /* 为 #useinfo 元素创建一个相对定位、半透明、带有圆角、居中显示的弹出框。在默认状态下，它是不可见的，但在鼠标悬停在 #infocontain 元素上时，通过设置 display: block;
+     以及添加了一个悬停效果的动画，它将变得可见 */
+    #useinfo {
+        position: relative;
+        display: none;
+        width: 200px;
+        background-color: rgba(255, 255, 255, 0.8);
+        top: 200%;
+        border-radius: 10px;
+        left: 80px;
+        /* 通过 transform 属性，将元素向左和向上移动，使其相对于其自身的中心点居中。这是通过使用百分比单位相对于元素的宽度和高度。 */
+        transform: translate(-50%, -50%);
+        text-align: left;
+        z-index: 1;
+        line-height: 18px;
+        padding: 20px;
+    }
+</style>
+
+<body>
+    <h2>Exp1:Point Cloud Display</h2>
+    <div id="contain">
+        <!-- 段落元素，显示文本 "总三维点数量:"，后面跟着一个用于显示信息的 <span> 元素，该 <span> 元素具有 class 为 "infos"。 -->
+        <p>总三维点数量:<span class="infos"></span></p>
+        <p>在正负6范围内的点数为:<span class="infos"></span></p>
+    </div>
+    <!-- 这是一个具有 id 为 "infocontain" 的 <div> 元素，用于包装关于使用说明的内容。 -->
+    <div id="infocontain">
+        <p>使用说明</p>
+        <!-- 具有 id 为 "useinfo" 的 <div> 元素，包含更详细的使用说明内容。 -->
+        <div id="useinfo">
+            <!-- 这些都只是显示一个文本说明 -->
+            <p>1. 左键旋转</p>
+            <p>2. 滚轮缩放</p>
+            <p>3. 右键平移</p>
+        </div>
+    </div>
+    <!-- 这个 <div> 元素将会应用在 <style> 中定义的 #webgl 选择器的样式规则。由于内联样式 style="position: absolute;" 也存在，它将与来自样式表的样式规则相结合。
+        在这里，position: absolute; 表示这个 <div> 元素的定位方式是绝对定位，根据包含块（可能是离它最近的定位祖先元素）进行定位。 -->
+    <div id="webgl" style="position: absolute;"></div>
+
+    <script type="importmap">
+    {
+      "imports": {
+        <!-- three: 通过 CDN 导入 Three.js 库的模块版本 0.158.0 -->
+        "three":"https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js",
+        <!-- 相对路径导入 OrbitControls.js 文件 -->
+        "./js/OrbitControls.js": "./js/OrbitControls.js",
+        "./js/PCDLoader.js": "./js/PCDLoader.js"
+      }
+    }
+      </script>
+
+<script type="module">
+
+    import * as THREE from 'three';
+        import { OrbitControls } from './js/OrbitControls.js';
+        import { PCDLoader } from './js/PCDLoader.js';
+        import { GUI } from './js/lil-gui.module.min.js'
+
+        
+    const scene = new THREE.Scene();
+    //  创建点云材质的,设置了点云的颜色和大小
+    const pointmaterial = new THREE.PointsMaterial({
+        color: 0x00fff0,
+        size: 0.03
+    });
+    // 控制器的状态或参数。看起来像是用于控制某个三维场景或对象的一些属性
+    controler = {
+        z: 3.14,
+        isRotate: true,
+        size: 0.05,
+        speed: 1,
+        showLight: true,
+        showGrid: true,//显示网格
+        showAxis: true,//显示坐标轴
+    };
+
+    // 添加坐标轴
+    var axesHelper = new THREE.AxisHelper(7);
+    // 添加平行光
+    var light = new THREE.DirectionalLight(0xffffff, 2);
+    light.position.set(10, 10, 10);
+    scene.add(light);
+    // 显示光源
+    var helper = new THREE.DirectionalLightHelper(light, 5);
+    //显示网格，xyz平面
+    var gridHelper = new THREE.GridHelper(10, 10);
+
+    var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 0, 18);
+    camera.lookAt(0, 0, 0);
+
+    // 创建WebGL渲染器实例
+    var renderer = new THREE.WebGLRenderer();
+    // 设置渲染器的背景色为黑色（十六进制颜色值）
+    renderer.setClearColor(0x000000);
+    // 设置渲染器的像素比例为设备的像素比例，以提高显示的清晰度。
+    renderer.setPixelRatio(window.devicePixelRatio);
+    // 启用抗锯齿，以改善渲染效果的平滑度
+    renderer.antialias = true;
+    // 设置渲染器的大小为当前窗口的大小。
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    // 获取具有id为'webgl'的HTML元素，并将渲染器的画布元素（domElement）添加到这个HTML元素中。这个步骤是为了将Three.js渲染的内容显示在页面上的特定元素中。
+    document.getElementById('webgl').appendChild(renderer.domElement);
+
+    var loader = new THREE.PLYLoader();
+
+/*
+
+回调函数通常在异步操作完成后被调用。异步操作是指程序不会等待操作完成就继续执行下一步的操作。
+而在异步操作完成后，系统会通知相应的回调函数执行相应的任务。
+
+以下是一些常见情况下回调函数被调用的场景：
+
+1. **文件加载：** 当使用JavaScript加载外部文件（如图像、音频、文本文件）时，通常使用异步的加载函数（如`addEventListener`或者类似的API）
+加载完成后，可以通过回调函数处理加载的数据。
+
+    ```javascript
+    var img = new Image();
+    img.src = 'example.jpg';
+    img.addEventListener('load', function () {
+        // 图像加载完成后执行的回调函数
+        console.log('Image loaded!');
+    });
+    ```
+
+2. **Ajax请求：** 在进行异步HTTP请求时，回调函数用于处理服务器响应。这可以是处理返回的数据，更新页面内容，或执行其他相关的操作。
+
+    ```javascript
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'example.json', true);
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState == 4 && xhr.status == 200) {
+            // 请求完成后执行的回调函数
+            console.log('Ajax request completed:', xhr.responseText);
+        }
+    };
+    xhr.send();
+    ```
+
+3. **定时器和延时执行：** 使用`setTimeout`或`setInterval`函数来设置定时器，回调函数将在指定的时间间隔之后被调用。
+
+    ```javascript
+    setTimeout(function () {
+        // 指定时间后执行的回调函数
+        console.log('Delayed function executed');
+    }, 2000);
+    ```
+
+4. **事件处理：** 在Web开发中，通过添加事件监听器，可以在特定事件发生时调用回调函数。例如，用户点击按钮、提交表单、滚动页面等。
+
+    ```javascript
+    document.getElementById('myButton').addEventListener('click', function () {
+        // 按钮点击后执行的回调函数
+        console.log('Button clicked!');
+    });
+    ```
+
+总的来说，回调函数通常用于处理异步操作的结果，确保在操作完成后执行相应的任务。这样可以有效地处理非阻塞操作，提高程序的性能和响应性。
+
+*/
+
+    // 加载Ply文件
+    loader.load('./images/p.ply', function (geometry) {
+        // load ply时把点云的信息储存到geometry中了
+        // geometry.attributes.position 表示几何体的位置信息，而 count 属性表示点的数量。
+        var pointCount = geometry.attributes.position.count;
+        console.log('点云中的三维点数量：' + pointCount);
+        // 定义范围，例如一个立方体范围
+        var range = new THREE.Box3(
+            new THREE.Vector3(-6, -6, -6), // 最小坐标
+            new THREE.Vector3(6, 6, 6)    // 最大坐标
+        );
+
+        // 初始化计数器
+        var pointsInRange = 0;
+
+        // 遍历点云中的每个点
+        // 使用 THREE.Vector3 类从缓冲属性中获取点的位置，并检查点是否在指定的范围内。
+        for (var i = 0; i < geometry.attributes.position.count; i++) {
+            // 使用 THREE.Vector3 类创建一个三维向量，并从缓冲属性 geometry.attributes.position 中获取第 i 个点的位置。
+            var pointPosition = new THREE.Vector3().fromBufferAttribute(geometry.attributes.position, i);
+
+            // 检查点是否在范围内，如果是就增加计数器的值
+            if (range.containsPoint(pointPosition)) {
+                pointsInRange++;
+            }
+        }
+        console.log('在指定范围内的点的数量：' + pointsInRange);
+        // 将点云的总点数和在指定范围内的点的数量更新到HTML文档中具有类名'infos'的元素中。让我们逐步解释
+/*
+document.getElementsByClassName('infos')：通过类名获取HTML文档中所有具有类名'infos'的元素。这会返回一个元素集合（NodeList）。
+
+[0]：选择集合中的第一个元素。
+
+.innerHTML = pointCount;：将该元素的内部HTML内容设置为 pointCount 的值。这样就把点云的总点数更新到页面上具有类名'infos'的第一个元素中。
+
+document.getElementsByClassName('infos')[1].innerHTML = pointsInRange;：同样的逻辑，将在指定范围内的点的数量 pointsInRange 更新到页面上具有类名'infos'的第二个元素中。
+*/ 
+        document.getElementsByClassName('infos')[0].innerHTML = pointCount;
+        document.getElementsByClassName('infos')[1].innerHTML = pointsInRange;
+
+        //var colors = geometry.attributes.color.array;
+        var pointmaterial = new THREE.PointsMaterial({
+            size: 0.03,
+            vertexColors: THREE.VertexColors
+        });
+
+        // 创建点云对象
+        var pointCloud = new THREE.Points(geometry, pointmaterial);
+        // pointCloud.geometry.addAttribute('color', new THREE.BufferAttribute(new Float32Array(colors), 3));
+
+        // 添加点云到场景
+        scene.add(pointCloud);
+
+        var gui = new dat.GUI();
+        gui.add(controler, 'z', -Math.PI, 2 * Math.PI).name('camera-Z');
+        gui.add(controler, 'isRotate').name('是否旋转');
+        gui.add(controler, 'size', 0.01, 0.1).name('点的大小').onChange(function (value) {
+            pointCloud.material.size = value;
+        });
+        gui.add(controler, 'speed', 0, 2).name('旋转速度').onChange(function (value) {
+            controler.speed = value;
+        });
+        gui.add(controler, 'showLight').name('显示光源方向');
+        gui.add(controler, 'showGrid').name('显示网格');
+        gui.add(controler, 'showAxis').name('显示坐标轴');
+        function virsualize() {
+            if (controler.showLight) {
+                scene.add(helper);
+            } else {
+                scene.remove(helper);
+            }
+            if (controler.showGrid) {
+                scene.add(gridHelper);
+            } else {
+                scene.remove(gridHelper);
+            }
+            if (controler.showAxis) {
+                scene.add(axesHelper);
+            } else {
+                scene.remove(axesHelper);
+            }
+        }
+        function rotate() {
+            if (controler.isRotate) {
+                pointCloud.rotation.y += 0.01 * controler.speed;
+            }
+        }
+
+        // 设置相机位置
+        // 设置交互性以允许旋转相机    
+
+        var controls = new THREE.OrbitControls(camera, renderer.domElement);
+        // 渲染场景
+        var animate = function () {
+            requestAnimationFrame(animate);
+            camera.rotation.z = controler.z;
+            rotate();
+            virsualize();
+            renderer.render(scene, camera);
+        };
+
+        animate();
+    });
+
+    </script>
+</body>
+</html>
