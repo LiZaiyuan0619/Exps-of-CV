@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>homework02</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pcl.js/dist/pcl.js"></script>
+</head>
+
+<body>
+    <script type="importmap">
+		{
+			"imports": {
+                "three": "./js/three.module.js"
+			}
+		}
+	</script>
+
+    <script type="module">
+
+    import * as THREE from 'three';
+        import { OrbitControls } from './js/OrbitControls.js';
+        import { PCDLoader } from './js/PCDLoader.js';
+        import { GUI } from './js/lil-gui.module.min.js';
+
+        var cloudFilteredData;
+        var cloudKeyPointData;
+        var minCutSegmentationData;
+        var cloudUnprocessedFirst;
+        var cloudUnprocessedSecond;
+        var cloudUnprocessedThird;
+        var cloud;
+        var mouseX = 0, mouseY = 0;
+        var windowWidth, windowHeight;
+        var i;
+        var cloudProcessedFirst;
+        var cloudProcessedSecond;
+        var cloudProcessedThird;
+        var cloudUnprocessed;
+        //scene
+        var scene = [];
+        for (i = 0; i < 3; i++) {
+            scene[i] = new THREE.Scene();
+        }
+        //camera
+        var camera = [];
+        for (i = 0; i < 3; i++) {
+            camera[i] = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera[i].position.set(0, 0, 5);
+            camera[i].lookAt(6, 6, 6);
+        }
+        //renderer
+        var renderer;
+        //for (i = 0; i < 3; i++) {
+        renderer = new THREE.WebGLRenderer();
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+        //}
+
+        //control
+        var control = [];
+        for (i = 0; i < 3; i++) {
+            control[i] = new OrbitControls(camera[i], renderer.domElement);
+            //control[i].addEventListener('change', render);
+            control[i].minDistance = 150;
+            control[i].maxDistance = 410;
+            control[i].addEventListener('change', render);//监听鼠标、键盘事件
+        }
+        //loader
+        const loader = new PCDLoader();
+        //material
+        const material1 = new THREE.PointsMaterial({
+            size: 5,
+            color: 0xffffff,
+            opacity: 0.5,
+            transparent: true,
+            sizeAttenuation: false,
+        });
+        const material2 = new THREE.PointsMaterial({
+            size: 5,
+            color: 0x114514,
+            opacity: 0.5,
+            transparent: true,
+            sizeAttenuation: false,
+        });
+        const material3 = new THREE.PointsMaterial({
+            size: 5,
+            color: 0x666666,
+            opacity: 0.5,
+            transparent: true,
+            sizeAttenuation: false,
+        });
+
+
+        // 创建辅助相机
+        const cameraPerspective = new THREE.PerspectiveCamera(90, 1, 0.1, 2000);
+        cameraPerspective.position.set(200, 200, 200);
+        cameraPerspective.lookAt(0, 0, 0);
+
+        // 创建辅助相机视锥体帮助器
+        const helper1 = new THREE.CameraHelper(cameraPerspective);
+        helper1.geometry.scale(50, 50, 50); // 将辅助相机几何体放大50倍
+        cameraPerspective.getWorldDirection(new THREE.Vector3());
+
+        const helper2 = new THREE.CameraHelper(cameraPerspective);
+        helper2.geometry.scale(50, 50, 50); // 将辅助相机几何体放大50倍
+        cameraPerspective.getWorldDirection(new THREE.Vector3());
+
+        const helper3 = new THREE.CameraHelper(cameraPerspective);
+        helper3.geometry.scale(50, 50, 50); // 将辅助相机几何体放大50倍
+        cameraPerspective.getWorldDirection(new THREE.Vector3());
+
+        scene[0].add(helper1);
+        scene[1].add(helper2);
+        scene[2].add(helper3);
+
+        // AxesHelper：辅助观察的坐标系
+        const axes1 = new THREE.AxesHelper(500);
+        const axes2 = new THREE.AxesHelper(500);
+        const axes3 = new THREE.AxesHelper(500);
+
+        scene[0].add(axes1);
+        scene[1].add(axes2);
+        scene[2].add(axes3);
+
+        const gridHelper1 = new THREE.GridHelper(10000, 200, 0xffffff, 0xffffff);
+        const gridHelper2 = new THREE.GridHelper(10000, 300, 0x8E7CC3, 0x8E7CC3);
+        const gridHelper3 = new THREE.GridHelper(10000, 300, 0x518FD4, 0x518FD4);
+        gridHelper1.position.y = -100;
+        gridHelper2.position.y = -100;
+        gridHelper3.position.y = -100;
+        scene[0].add(gridHelper1);
+        scene[1].add(gridHelper2);
+        scene[2].add(gridHelper3);
+        //调用主函数
+        main();
+
+        async function main() {
+            // 初始化了PCL库。PCL.init是一个异步操作，它从给定的URL加载PCL的WebAssembly模块。这里的URL指向了PCL库的核心模块。
+            await PCL.init({
+                url: 'https://cdn.jsdelivr.net/npm/pcl.js/dist/pcl-core.wasm',
+            });
+            // 获取 PCD 文件
+            // fetch API异步地从服务器获取一个PCD（Point Cloud Data）文件，并将其作为数组缓冲区（ArrayBuffer）读取。PCD文件包含了点云数据。
+            const data = await fetch('images/person.pcd').then(res => res.arrayBuffer());
+            // 加载PCD文件数据，返回点云对象
+            // 使用PCL.loadPCDData函数加载PCD文件数据，并返回一个点云对象。这个对象可能包含了点的位置、颜色等信息。
+            cloud = PCL.loadPCDData(data, PCL.PointXYZ);
+            cloudUnprocessed = PCL.savePCDDataASCII(cloud);
+            //点云处理
+            // 去除噪声（StatisticalOutlierRemoval），提取关键点（ISSKeypoint3D），以及进行点云分割（MinCutSegmentation）。
+            StatisticalOutlierRemoval();
+            ISSKeypoint3D();
+            MinCutSegmentation();
+
+            //展示点云
+            animate();
+        }
+
+        // 滤波过程,使用 StatisticalOutlierRemoval 过滤器去除异常值
+        function StatisticalOutlierRemoval() {
+            // 创建了一个 StatisticalOutlierRemoval 对象，用于移除点云中的离群点。
+            const sor = new PCL.StatisticalOutlierRemoval();
+            // 。通过设置MeanK和StddevMulThresh参数，定义了滤波的标准
+            sor.setInputCloud(cloud);
+            // MeanK代表每个点周围考虑的邻近点数量，StddevMulThresh是标准差乘数阈值，用于决定哪些点被视为离群点。
+            sor.setMeanK(control1.Meank);
+            sor.setStddevMulThresh(control1.StddevMulThresh);
+            // filter方法应用这些设置来滤除点云中的噪声
+            const cloudFiltered = sor.filter();
+            // PCL.savePCDDataASCII保存处理后的点云数据
+            cloudFilteredData = PCL.savePCDDataASCII(cloudFiltered);
+            // 解析处理后和未处理的点云数据
+            cloudProcessedFirst = loader.parse(cloudFilteredData, '');
+            cloudUnprocessedFirst = loader.parse(cloudUnprocessed, '');
+            //position
+            // 对未处理的和处理后的点云进行位置设置和缩放。position.set方法设置点云的位置，而geometry.scale方法调整点云的大小。
+            cloudUnprocessedFirst.position.set(0, 0, 0);
+            cloudUnprocessedFirst.geometry.scale(60, 60, 60);
+            cloudProcessedFirst.position.set(0, 0, 0);
+            cloudProcessedFirst.geometry.scale(60, 60, 60);
+            //material
+            cloudUnprocessedFirst.material = material1;
+            cloudProcessedFirst.material = material1;
+            //camera
+            camera[0].lookAt(cloudProcessedFirst.position);
+            //scene      
+            scene[0].add(cloudUnprocessedFirst);
+
+            console.log('点云一名字为' + 'person.pcd');
+            console.log('原点云颜色' + cloudUnprocessedFirst.geometry.attributes.color);
+            console.log('原点云总点数' + cloudUnprocessedFirst.geometry.attributes.position.count);
+            console.log('处理后点云总点数' + cloudProcessedFirst.geometry.attributes.position.count);
+            console.log('处理前点云各点位置' + cloudUnprocessedFirst.geometry.attributes.position);
+            console.log('处理后点云各点位置' + cloudProcessedFirst.geometry.attributes.position);
+        }
+        //提取关键点过程,使用ISSKeypoint3D提取关键点
+        function ISSKeypoint3D() {
+            // 计算了输入点云的平均分辨率。分辨率通常是指点云中点与点之间的平均距离，这对于后续的关键点检测和其他处理步骤非常重要。
+            const resolution = PCL.computeCloudResolution(cloud);
+            // 创建了一个Kd树搜索对象，用于在点云中有效地搜索邻近点。Kd树是一种用于多维空间点的搜索和组织的数据结构。
+            const tree = new PCL.SearchKdTree();
+            // 创建一个新的点云对象，用于存储检测到的关键点
+            const keypoints = new PCL.PointCloud();
+            // 初始化了一个ISS关键点检测器（Intrinsic Shape Signatures）
+            const iss = new PCL.ISSKeypoint3D();
+            // 通过设置搜索方法、显著半径（setSalientRadius）、非最大半径（setNonMaxRadius）、阈值和最小邻居数，配置了ISS算法。这些参数共同决定了如何从原始点云中识别关键点。
+            iss.setSearchMethod(tree);
+            iss.setSalientRadius(control2.SalientRadius * resolution);
+            iss.setNonMaxRadius(control2.NonMaxRadius * resolution);
+            iss.setThreshold21(0.975);
+            iss.setThreshold32(0.975);
+            iss.setMinNeighbors(control2.MinNeighbors);
+            iss.setInputCloud(cloud);
+            // 使用compute方法执行关键点检测，并将检测到的关键点存储在之前创建的keypoints点云对象中。
+            iss.compute(keypoints);
+            cloudKeyPointData = PCL.savePCDDataASCII(keypoints);
+            cloudProcessedSecond = loader.parse(cloudKeyPointData, '');
+            cloudUnprocessedSecond = loader.parse(cloudUnprocessed, '');
+            //position&&scale
+            cloudUnprocessedSecond.position.set(0, 0, 0);
+            cloudUnprocessedSecond.geometry.scale(60, 60, 60);
+            cloudProcessedSecond.position.set(0, 0, 0);
+            cloudProcessedSecond.geometry.scale(60, 60, 60);
+            //material
+            cloudUnprocessedSecond.material = material2;
+            cloudProcessedSecond.material = material2;
+            //camera
+            camera[1].lookAt(cloudProcessedSecond.position);
+            //scene      
+            scene[1].add(cloudUnprocessedSecond);
+
+            console.log('点云二名字为' + 'person.pcd');
+            console.log('原点云颜色' + cloudUnprocessedSecond.geometry.attributes.color);
+            console.log('原点云总点数' + cloudUnprocessedSecond.geometry.attributes.position.count);
+            console.log('处理后点云总点数' + cloudProcessedSecond.geometry.attributes.position.count);
+            console.log('处理前点云各点位置' + cloudUnprocessedSecond.geometry.attributes.position);
+            console.log('处理后点云各点位置' + cloudProcessedSecond.geometry.attributes.position);
+        }
+        //最小切割过程,使用MinCutSegmentation进行最小切割 显示为红色
+        function MinCutSegmentation() {
+            const mcSeg = new PCL.MinCutSegmentation();
+            const objectCenter = new PCL.PointXYZ(68.97, -18.55, 0.57);
+            const foregroundPoints = new PCL.PointCloud();
+            foregroundPoints.addPoint(objectCenter);
+            mcSeg.setForegroundPoints(foregroundPoints);
+            mcSeg.setInputCloud(cloud);
+            mcSeg.setRadius(3.0433856);
+            mcSeg.setSigma(control3.sigma);
+            mcSeg.setSourceWeight(control3.sourceWeight);
+            mcSeg.setNumberOfNeighbours(control3.numberOfNeighbours);
+            const clusters = mcSeg.extract();
+            const minCutPointCloud = mcSeg.getColoredCloud();
+            minCutSegmentationData = PCL.savePCDDataASCII(minCutPointCloud);
+            cloudProcessedThird = loader.parse(minCutSegmentationData, '');
+            cloudUnprocessedThird = loader.parse(cloudUnprocessed, '');
+            //position&&scale
+            cloudUnprocessedThird.position.set(0, 0, 0);
+            cloudUnprocessedThird.geometry.scale(60, 60, 60);
+            cloudProcessedThird.position.set(0, 0, 0);
+            cloudProcessedThird.geometry.scale(60, 60, 60);
+            //material
+            cloudUnprocessedThird.material = material3;
+            cloudProcessedThird.material = material1;
+            //camera
+            camera[2].lookAt(cloudProcessedThird.position);
+            //scene      
+            scene[2].add(cloudUnprocessedThird);
+
+            console.log('点云三名字为' + 'person.pcd');
+            console.log('原点云颜色' + cloudUnprocessedThird.geometry.attributes.color);
+            console.log('原点云总点数' + cloudUnprocessedThird.geometry.attributes.position.count);
+            console.log('处理后点云总点数' + cloudProcessedThird.geometry.attributes.position.count);
+            console.log('处理前点云各点位置' + cloudUnprocessedThird.geometry.attributes.position);
+            console.log('处理后点云各点位置' + cloudProcessedThird.geometry.attributes.position);
+        }
+
+        function updateSize() {
+
+            if (windowWidth != window.innerWidth || windowHeight != window.innerHeight) {
+                windowWidth = window.innerWidth;
+                windowHeight = window.innerHeight;
+                //for (i = 0; i < 3; i++) {
+                renderer.setSize(windowWidth, windowHeight);
+                //}
+            }
+        }
+        //control用于gui
+        const control1 = {
+            StddevMulThresh: 1.0,
+            Meank: 40,
+            showCloud: true,
+        };
+        const control2 = {
+            SalientRadius: 6,
+            NonMaxRadius: 4,
+            MinNeighbors: 5,
+            showCloud: true,
+        };
+        const control3 = {
+            Radius: 3.0433856,
+            sigma: 0.25,
+            sourceWeight: 0.8,
+            numberOfNeighbours: 14,
+            showCloud: true,
+        }
+        //gui控制滤波点云
+        var guifirst = new GUI().title("滤波");
+
+        guifirst.domElement.style.position = 'absolute';
+        guifirst.domElement.style.left = '0';
+        guifirst.add(control1, 'showCloud').name("滤波").onChange(function () {
+            if (control1.showCloud) {
+                scene[0].remove(cloudUnprocessedFirst);
+                scene[0].add(cloudProcessedFirst);
+            } else {
+                scene[0].remove(cloudProcessedFirst);
+                scene[0].add(cloudUnprocessedFirst);
+            }
+        });
+        // guifirst.add(cloudProcessedFirst.material, 'color').onChange(render).name("改变颜色");
+        // guifirst.add(cloudProcessedFirst.material, 'size', 1, 10).onChange(render).name("改变大小");
+        guifirst.add(control1, 'Meank', 1, 100).name("Meank").onChange(function () {
+            StatisticalOutlierRemoval();
+        })
+        guifirst.add(control1, 'StddevMulThresh', 1, 10).name("StddevMulThresh").onChange(function () {
+            StatisticalOutlierRemoval();
+        })
+        guifirst.open();
+        //gui控制关键点点云
+        var guisecond = new GUI().title("关键点");
+
+        guisecond.domElement.style.position = 'absolute';
+        guisecond.domElement.style.top = '400px';
+
+        guisecond.add(control2, 'showCloud').name("提取关键点").onChange(function (showCloud) {
+            if (control2.showCloud) {
+                scene[1].remove(cloudUnprocessedSecond);
+                scene[1].add(cloudProcessedSecond);
+            } else {
+                scene[1].remove(cloudProcessedSecond);
+                scene[1].add(cloudUnprocessedSecond);
+            }
+        });
+        guisecond.add(control2, 'SalientRadius', 1, 10).name("SalientRadius").onChange(function () {
+            ISSKeypoint3D();
+        });
+        guisecond.add(control2, 'NonMaxRadius', 1, 10).name("NonMaxRadius").onChange(function () {
+            ISSKeypoint3D();
+        });
+        guisecond.add(control2, 'MinNeighbors', 1, 10, 1).name("MinNeighbors").onChange(function () {
+            ISSKeypoint3D();
+        });
+        guisecond.open();
+        //gui控制切割点云
+        var guithird = new GUI().title("最小切割");
+
+        guithird.domElement.style.position = 'absolute';
+
+        guithird.add(control3, 'showCloud').name("最小切割").onChange(function (showCloud) {
+            if (control3.showCloud) {
+                scene[2].remove(cloudUnprocessedThird);
+                scene[2].add(cloudProcessedThird);
+            } else {
+                scene[2].remove(cloudProcessedThird);
+                scene[2].add(cloudUnprocessedThird);
+            }
+        });
+        guithird.add(control3, 'Radius', 1, 10).name(" Radius").onChange(function () {
+            MinCutSegmentation();
+        });
+        guithird.add(control3, 'sigma', 0, 1).name(" sigma").onChange(function () {
+            MinCutSegmentation();
+        });
+        guithird.add(control3, 'sourceWeight', 1, 5).name("sourceWeight").onChange(function () {
+            MinCutSegmentation();
+        });
+        guithird.add(control3, 'numberOfNeighbours', 1, 50, 1).name("numberOfNeighbours").onChange(function () {
+            MinCutSegmentation();
+        });
+        guithird.open();
+
+        // animate函数
+        function animate() {
+            requestAnimationFrame(animate);
+            for (var i = 0; i < 3; i++) { // 更新控制器状态
+                control[i].update();
+            }
+            render();
+        }
+
+        //创建视口
+        const views = [
+            {
+                left: 0,
+                bottom: 0,
+                width: 0.5,
+                height: 1.0,
+                background: new THREE.Color().setRGB(0.5, 0.5, 0.7, THREE.SRGBColorSpace)
+            },
+            {
+                left: 0.5,
+                bottom: 0,
+                width: 0.5,
+                height: 0.5,
+                background: new THREE.Color().setRGB(0.7, 0.5, 0.5, THREE.SRGBColorSpace)
+            },
+            {
+                left: 0.5,
+                bottom: 0.5,
+                width: 0.5,
+                height: 0.5,
+                background: new THREE.Color().setRGB(0.5, 0.7, 0.7, THREE.SRGBColorSpace)
+            }
+        ];
+        //render函数
+        function render() {
+            updateSize();
+
+            for (let ii = 0; ii < 3; ++ii) {
+
+                const view = views[ii];
+                //const renderer = renderers[ii];
+                const left = Math.floor(windowWidth * view.left);
+                const bottom = Math.floor(windowHeight * view.bottom);
+                const width = Math.floor(windowWidth * view.width);
+                const height = Math.floor(windowHeight * view.height);
+
+                renderer.setViewport(left, bottom, width, height);
+                renderer.setScissor(left, bottom, width, height);
+                renderer.setScissorTest(true);
+                renderer.setClearColor(view.background);
+
+                renderer.render(scene[ii], camera[ii]);
+            }
+        }
+    </script>
+</body>
+
+</html>

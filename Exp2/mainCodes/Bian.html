@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>实验二 点云框架的实现</title>
+    <!-- 简单的样式表（CSS），用于定义网页中特定元素的样式 -->
+    <!-- 将网页主体的外边距设置为0。这通常用于重置浏览器默认的边距，使网页的内容能够充满整个浏览器窗口，没有任何未利用的空间。 -->
+    <!-- 设置canvas元素的高宽度 -->
+    <style>
+        body {
+            margin: 0;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+    <script type="importmap">
+    {
+      "imports": {
+        "three":"https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js",
+        "./js/OrbitControls.js": "./js/OrbitControls.js",
+        "./js/PCDLoader.js": "./js/PCDLoader.js"
+        
+      }
+    }
+</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pcl.js/dist/pcl.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.min.js"></script>
+
+</head>
+<script type="module">
+
+
+    import * as THREE from 'three';
+    import { PCDLoader } from "./js//PCDLoader.js";
+    import { OrbitControls } from './js//OrbitControls.js';
+
+    var cloudFilteredData;
+    var gui = new dat.GUI();
+
+    // 创建场景
+    const scene1 = new THREE.Scene();
+    const scene2 = new THREE.Scene();
+    const scene3 = new THREE.Scene();
+
+    const camera1 = new THREE.PerspectiveCamera(75, window.innerWidth / (2 * window.innerHeight), 0.1, 1000);
+    const camera2 = new THREE.PerspectiveCamera(75, window.innerWidth / (2 * window.innerHeight), 0.1, 1000);
+    const camera3 = new THREE.PerspectiveCamera(75, window.innerWidth / (2 * window.innerHeight), 0.1, 1000);
+
+    camera1.position.set(0, 100, -11);
+    camera2.position.set(0, 0, 1);
+    camera3.position.set(0, 100, -11);
+
+    camera1.lookAt(0, 0, 0);
+    camera2.lookAt(-1, 0, 1);
+    camera3.lookAt(0, 0, 0);
+
+    // 创建渲染器
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+
+    // 渲染函数
+    // 创建动画。该函数的主要作用是循环调用自身以持续渲染场景，同时设置不同部分的视图和颜色
+    function animate() {
+        // 递归调用，使得 animate 函数不断被浏览器在最佳时间进行调用，从而创建平滑的动画效果。
+        // requestAnimationFrame 是浏览器提供的用于动画的方法，它告诉浏览器你希望执行动画并请求浏览器在下一次重绘之前调用指定的函数来更新动画。
+        requestAnimationFrame(animate);
+        // 这一行开启了剪刀测试（Scissor Test），它允许渲染器只渲染某个特定的矩形区域。
+        renderer.setScissorTest(true);
+
+        // 接下来的几行代码分为三部分，每部分都对应于屏幕上的一个区域，并为每个区域设置不同的视口、剪刀区域和清除色（背景色）。
+        // 实现操作:设置视口和剪刀区域设置为屏幕左侧的三分之一  设置清除色渲染 scene1 使用 camera1
+
+        renderer.setScissor(0, 0, window.innerWidth / 3, window.innerHeight);
+        renderer.setViewport(0, 0, window.innerWidth / 3, window.innerHeight);
+
+        renderer.setClearColor(0x0000ff);
+        renderer.render(scene1, camera1);
+
+        renderer.setScissor(window.innerWidth / 3, 0, window.innerWidth / 3, window.innerHeight);
+        renderer.setViewport(window.innerWidth / 3, 0, window.innerWidth / 3, window.innerHeight);
+
+        renderer.setClearColor(0xff0000);
+        renderer.render(scene2, camera2);
+
+        renderer.setScissor(window.innerWidth * 2 / 3, 0, window.innerWidth / 3, window.innerHeight);
+        renderer.setViewport(window.innerWidth * 2 / 3, 0, window.innerWidth / 3, window.innerHeight);
+
+        renderer.setClearColor(0x00ffff);
+        renderer.render(scene3, camera3);
+    }
+
+    // 启动动画循环
+    const control1 = new OrbitControls(camera1, renderer.domElement);
+    const control2 = new OrbitControls(camera2, renderer.domElement);
+    const control3 = new OrbitControls(camera3, renderer.domElement);
+
+    control1.addEventListener('change', function () {
+        renderer.render(scene1, camera1);
+    });
+
+    control2.addEventListener('change', function () {
+        renderer.render(scene2, camera2);
+    });
+
+    control3.addEventListener('change', function () {
+        renderer.render(scene3, camera3);
+    });
+
+
+
+    // 声明了两个变量 cloud 和 cloudFiltered，它们将在代码中用于存储原始的点云数据和经过滤波处理后的点云数据。
+    let cloud;
+    let cloudFiltered;
+    //scene1
+    // 这里定义了两个标准偏差相关的变量，可能用于后续的统计滤波处理。
+    var Stddev = 0.5;
+    var Stddev_ = 0.5;
+    let point1;
+    // 异步函数 main1，意味着它将执行一些可能需要等待的操作，如网络请求或长时间运行的计算
+    async function main1() {
+        // 使用 fetch API 从指定路径加载PCD（Point Cloud Data）文件，这是一种常用于存储3D点云数据的格式。
+        const cloudBuffer = await fetch("./images/ism_train_lioness.pcd").then((res) =>
+            res.arrayBuffer()//将响应数据转换为 ArrayBuffer。
+        );
+        // 初始化PCL库，这可能是一个WebAssembly模块，用于高效地处理点云数据。
+        await PCL.init({
+            url: `./images/pcl-core.wasm`
+        });
+
+        cloud = PCL.loadPCDData(cloudBuffer, PCL.PointXYZ);
+        const start = Date.now();
+        // 使用 StatisticalOutlierRemoval 方法来移除离群点，这是一种常用的点云降噪技术。
+        const sor = new PCL.StatisticalOutlierRemoval();
+        sor.setInputCloud(cloud);
+        // 设置滤波器参数
+        sor.setMeanK(40);
+        sor.setStddevMulThresh(Stddev_);
+        // 应用滤波器并获取过滤后的点云数据
+        cloudFiltered = sor.filter();
+        // 来记录处理的起始和结束时间，然后输出所需的秒数。
+        console.log((Date.now() - start) / 1000);
+        // 将过滤后的点云数据转换为ASCII格式的PCD数据。
+        cloudFilteredData = PCL.savePCDDataASCII(cloudFiltered);
+        showPointCloud1();
+
+    }
+
+    function showPointCloud1() {
+        // 创建一个文本解码器，用于将二进制数据解码为UTF-8格式的字符串
+        const decoder = new TextDecoder('utf-8');
+        // 将过滤后的点云数据（cloudFilteredData）从二进制形式转换为UTF-8字符串。
+        const pcdString = decoder.decode(new Uint8Array(cloudFilteredData));
+
+        // 从字符串创建 Blob
+        // PCD数据字符串转换为一个Blob对象。Blob对象用于处理大量的二进制数据。
+        const blob = new Blob([pcdString], { type: 'text/plain' });
+
+        // 从 Blob 创建 URL
+        // 创建一个指向该Blob的URL，这个URL可以用于在后续过程中引用这些数据。
+        const url = URL.createObjectURL(blob);
+
+        // 创建点云加载器
+        const loader = new PCDLoader();
+        // 使用这个加载器从之前创建的Blob URL加载点云数据。加载完成后，会调用一个回调函数来处理加载的点云（points）。
+        loader.load(url,
+            function (points) {
+
+                points.geometry.center();
+                points.material.size = 0.001;
+                points.material.color = new THREE.Color(0x00ffff); // 模型颜色
+                scene1.add(points);
+                points.position.set(0, 0, 0);
+                renderer.render(scene1, camera1);
+                // 计算点云中点的数量，并将其存储在变量Filter_for_outliers中。
+                const numPoints = points.geometry.getAttribute('position').count;
+                var Filter_for_outliers = numPoints;
+                var data1 = {
+                    Filter_for_outliers,
+                };
+
+                point1 = points;
+                t = false;
+            },
+            function (xhr) {
+            },
+            function (error) {
+                console.log('An error happened');
+            }
+        );
+
+    }
+    //scene2
+    let point2, point2_1, point2_2;
+    let keypoints;
+    let source;
+    let target;
+    let final;
+    var MaximumIterations = 50;
+    var MaximumIterations_ = 50;
+    async function main2() {
+        // 使用 fetch API 两次从同一路径（"./images/simple.pcd"）加载PCD文件。这可能是为了演示或测试ICP算法，使用两个相同的点云数据作为源（source）和目标（target）
+        const bun0 = await fetch("./images/simple.pcd").then((res) =>
+            res.arrayBuffer()
+        );
+        const bun4 = await fetch("./images/simple.pcd").then((res) =>
+            res.arrayBuffer()
+        );
+        // 初始化PCL库，可能是WebAssembly模块，用于处理点云数据。
+        await PCL.init({
+            url: `./images/pcl-core.wasm`
+        });
+        source = PCL.loadPCDData(bun0, PCL.PointXYZ);
+        target = PCL.loadPCDData(bun4, PCL.PointXYZ);
+        final = new PCL.PointCloud(PCL.PointXYZ);
+        const time = Date.now();
+        // 创建一个ICP实例
+        const icp = new PCL.IterativeClosestPoint();
+        //  设置ICP算法的源点云。
+        icp.setInputSource(source);
+        // 设置ICP算法的目标点云。
+        icp.setInputTarget(target);
+        // 设置ICP算法的参数，如最大迭代次数、变换的精度阈值、最大对应距离。
+        icp.setMaximumIterations(MaximumIterations_);
+        icp.setTransformationEpsilon(1e-8);
+        icp.setMaxCorrespondenceDistance(0.05);
+        // 执行ICP算法
+        icp.align(final);
+        console.log("ICP", Date.now() - time, "ms");
+
+        // 将ICP算法的结果转换为ASCII格式的PCD数据。
+        cloudFilteredData = PCL.savePCDDataASCII(final);
+
+        showPointCloud2();
+    }
+
+
+
+    function showPointCloud2() {
+
+        const decoder = new TextDecoder('utf-8');
+        const pcdString = decoder.decode(new Uint8Array(cloudFilteredData));
+
+        // 从字符串创建 Blob
+        const blob = new Blob([pcdString], { type: 'text/plain' });
+
+        // 从 Blob 创建 URL
+        const url2 = URL.createObjectURL(blob);
+
+
+        // 创建点云加载器
+        const loader = new PCDLoader();
+        loader.load(url2,
+            function (points) {
+
+                points.geometry.center();
+                points.material.size = 0.005;
+                points.material.color = new THREE.Color(0x00ffff); // 模型颜色
+
+                points.position.set(0, 0, 0);
+                scene2.add(points);
+                renderer.render(scene2, camera2);
+                const numPoints = points.geometry.getAttribute('position').count;
+                var Fusion = numPoints;
+                var data2 = {
+                    Fusion,
+                };
+
+                point2 = points;
+
+            },
+            function (xhr) {
+            },
+            function (error) {
+                console.log('An error happened');
+                console.error('An error occurred:', error);
+            }
+        );
+    }
+
+    //scene3
+    let point3;
+    let coloredCloud;
+    var Sigma = 0.25;
+    var SourceWeight = 0.8;
+    var NumberOfNeighbours = 14;
+    var Sigma_ = 0.25;
+    var SourceWeight_ = 0.8, NumberOfNeighbours_ = 14;
+
+    // 执行点云数据的最小割分割（MinCutSegmentation）。最小割分割是一种图像处理算法，用于从点云中分离出特定的对象
+    async function main3() {
+        const cloudBuffer = await fetch("./images/ism_train_lioness.pcd").then((res) =>
+            res.arrayBuffer()
+        );
+
+        await PCL.init({
+            url: `./images/pcl-core.wasm`
+        });
+
+        cloud = PCL.loadPCDData(cloudBuffer, PCL.PointXYZ);
+        // 定义一个点（在这种情况下是对象的中心），用于帮助算法确定分割的起点。
+        const objectCenter = new PCL.PointXYZ(68.97, -18.55, 0.57);
+        // 创建一个新的点云
+        const foregroundPoints = new PCL.PointCloud();
+        // 将前面定义的点添加到点云中。
+        foregroundPoints.addPoint(objectCenter);
+
+        //  创建最小割分割的实例。
+        const seg = new PCL.MinCutSegmentation();
+        // 设置算法的各种参数，如前景点、输入点云、半径、sigma值、源权重和邻居数量。
+        seg.setForegroundPoints(foregroundPoints);
+        seg.setInputCloud(cloud);
+        seg.setRadius(3.0433856);
+        seg.setSigma(Sigma_);
+        seg.setSourceWeight(SourceWeight_);
+        seg.setNumberOfNeighbours(NumberOfNeighbours_);
+        // 执行分割算法
+        seg.extract();
+        // 获取分割后的着色点云，这可能会用不同的颜色标记不同的区域。
+        coloredCloud = seg.getColoredCloud();
+        // 将分割后的点云数据转换为ASCII格式的PCD数据。
+        cloudFilteredData = PCL.savePCDDataASCII(coloredCloud);
+        showPointCloud3();
+
+    }
+
+    function showPointCloud3() {
+        const decoder = new TextDecoder('utf-8');
+        const pcdString = decoder.decode(new Uint8Array(cloudFilteredData));
+
+        // 从字符串创建 Blob
+        const blob = new Blob([pcdString], { type: 'text/plain' });
+
+        // 从 Blob 创建 URL
+        const url = URL.createObjectURL(blob);
+
+
+
+        // 创建点云加载器
+        const loader = new PCDLoader();
+        loader.load(url,
+            function (points) {
+
+                points.geometry.center();
+                points.material.size = 0.01;
+                points.material.color = new THREE.Color(0x00ffff); // 模型颜色
+                scene3.add(points);
+                points.position.set(0, 0, 0);
+                renderer.render(scene3, camera3);
+                const numPoints = points.geometry.getAttribute('position').count;
+
+
+                var incise = numPoints;
+                var data3 = {
+                    incise,
+                };
+
+                point3 = points;
+                t3 = false;
+            },
+            function (xhr) {
+            },
+            function (error) {
+                console.log('An error happened');
+            }
+        );
+    }
+
+
+    main1();
+    main2();
+    main3();
+
+    function updatePointCloud() {
+
+        main1();
+        main2();
+        main3();
+    }
+
+    // 创建GUI界面
+    var folder = gui.addFolder('Scene 1');
+    var folder2 = gui.addFolder('Scene 2');
+    var folder3 = gui.addFolder('Scene 3');
+
+    // 控制显示处理后点云数量
+    folder.add({ Filter_for_outliers: 0 }, 'Filter_for_outliers').listen();
+    folder2.add({ Fusion: 0 }, 'Fusion').listen();
+    folder3.add({ incise: 0 }, 'incise').listen();
+
+    // 控制显示处理前点云数量
+    folder.add({ Stddev: 0.5 }, 'Stddev', 0, 1).onChange(function (value) {
+        Stddev_ = value;
+        if (!true) {
+            scene1.remove(point1);
+
+            updatePointCloud();
+        }
+    });
+
+    folder2.add({ MaximumIterations: 50 }, 'MaximumIterations', 0, 100).onChange(function (value) {
+        MaximumIterations_ = value;
+        if (!true) {
+            scene2.remove(point2);
+
+            updatePointCloud();
+        }
+    });
+
+    folder3.add({ Sigma: 0.25, SourceWeight: 0.8, NumberOfNeighbours: 14 }, 'Sigma', 0, 1).onChange(function (value) {
+        Sigma_ = value;
+        if (!true) {
+            scene3.remove(point3);
+
+            updatePointCloud();
+        }
+    });
+
+
+
+
+
+    animate();
+
+
+
+
+</script>
+</body>
+
+</html>

@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <!-- 指定类网页标题、编码方式、视图窗口元标签、窗口大小、禁止缩放，连接了一个CSS样式表，指定了jQuery库版本和链接了PCL.js库 -->
+    <title>PCL点云处理应用</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <link type="text/css" rel="stylesheet" href="/css/main.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pcl.js/dist/pcl.js"></script>
+</head>
+<!-- 
+使用importmap有几个好处：
+
+版本控制：确保整个应用使用相同版本的库。
+性能优化：通过CDN链接导入模块可以提高加载速度。
+维护简便：在importmap中更改库的版本或位置，而不需要修改整个代码库中的多个导入语句。
+ -->
+<body>
+    <!-- 指定JavaScript模块的导入映射，告诉浏览器这个脚本包含的是模块映射信息 -->
+    <!-- 定义了模块的别名和它们对应的URL -->
+    <script type="importmap">
+			{
+			"imports": {
+				"three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js",
+				"three/addons/": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/"
+				}
+			}
+		</script>
+    <script type="module">
+        // 利用ES6的import语句来导入不同的模块和库
+        import * as THREE from 'three';
+        import { PCDLoader } from 'three/addons/loaders/PCDLoader.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import Stats from 'three/addons/libs/stats.module.js'
+        import { GUI } from 'three/addons/libs/lil-gui.module.min.js'
+//     var：
+
+//         作用域：var声明的变量具有函数作用域，如果在函数外声明，则为全局作用域。
+//         提升：var声明会被提升到其作用域的顶部，但是赋值不会提升。
+//         重新赋值：可以重新赋值。
+//         使用情景：尽管var曾经是JavaScript中声明变量的主要方式，但现在通常推荐使用let和const来代替，因为它们提供了更好的作用域控制。如果你在维护老旧代码或需要确保兼容性，可能还需要使用var。
+//     let：
+
+//         作用域：let声明的变量具有块作用域（即大括号{ }内部）。
+//         提升：不会提升。在声明前访问变量会导致ReferenceError。
+//         重新赋值：可以重新赋值。
+//         使用情景：当你需要一个只在特定块（如循环、条件语句等）内有效的变量时，应该使用let。它避免了var可能引起的意外全局变量声明和变量值泄露。
+//     const：
+
+//         作用域：同let，const声明的变量也具有块作用域。
+//         提升：同let，不会提升。
+//         重新赋值：不可以重新赋值。一旦一个变量被const声明，其值就不能改变。
+//         使用情景：当你声明一个不打算修改的变量时，应该使用const。这对于增强代码的可读性非常有用，因为它向阅读代码的人明确表明这个变量的值是固定的。
+
+
+        let stat, renderer, controls = [];
+        let cloud;
+        let data, bun0, bun4;
+        let windowWidth, windowHeight;
+        let cloudKeyPoint, CloudFiltered, cloudicp, mesh, mesh_or;
+        const loader = new PCDLoader();
+        const views = [
+            {
+                left: 0,
+                bottom: 0.5,
+                width: 0.5,
+                height: 0.5,
+            },
+            {
+                left: 0.5,
+                bottom: 0.5,
+                width: 0.5,
+                height: 0.5,
+            },
+            {
+                left: 0,
+                bottom: 0,
+                width: 0.5,
+                height: 0.5,
+            },
+            {
+                left: 0.5,
+                bottom: 0,
+                width: 0.5,
+                height: 0.5,
+            },
+        ];
+        const param = {
+            // 与关键点检测相关的参数
+            keypoint:
+            {
+                // 关键点检测的显著半径
+                salientRadius: 6,
+                // 最大半径
+                maxRadius: 4,
+                //  这两个阈值可能用于关键点检测算法中，用于确定点是否为关键点。
+                threshold21: 0.975,
+                threshold32: 0.975,
+                // 关键点周围的最小邻居数
+                minNeighbors: 5,
+                // 指示是否显示点云。
+                showCloud: true
+            },
+            // 体素网格过滤器的参数
+            voxelGrid:
+            {
+                // 体素的大小
+                leafSize: 1,
+                // 指示是否显示点云
+                showCloud: true
+            },
+            // 迭代最近点（Iterative Closest Point, ICP）算法的参数
+            icp:
+            {
+                // 最大迭代次数
+                maxIterations: 50,
+                // 变换的极小值，用于判断算法是否收敛
+                transformationEpsilon: 1e-8,
+                // 最大对应距离，用于匹配点云中的点。
+                maxCorrespondenceDistance: 0.05,
+                // 指示是否显示处理后的点云
+                showCloud: false
+            },
+            // k-d树是一种用于多维空间关键点搜索的数据结构：
+            kdtree:
+            {
+                //  搜索的原点，具有x、y、z坐标。
+                origin: {
+                    x: 1,
+                    y: 1,
+                    z: 1,
+                },
+                // 第k个最近的点
+                kth: 50,
+                // 用于搜索的极小值
+                epsilon: 0.01,
+                showCloud: true
+            }
+
+        }
+
+        init();
+        main();
+        animate();
+
+        function init() {
+            // 创建一个新的WebGL渲染器，开启抗锯齿功能，以提高渲染质量。
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            // 设置渲染器的像素比，以适应不同设备的显示屏。
+            renderer.setPixelRatio(window.devicePixelRatio);
+            // 设置渲染器的大小，通常与浏览器窗口大小相同。
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            // 将渲染器的DOM元素添加到文档的body中。
+            document.body.appendChild(renderer.domElement);
+
+            // 循环views数组，对每个视图进行初始化
+            for (let i = 0; i < views.length; ++i) {
+                // 对于每个视图，创建一个新的THREE场景（THREE.Scene()），透视相机（THREE.PerspectiveCamera），以及坐标轴辅助工具（THREE.AxesHelper）。
+                const view = views[i];
+                let scene = new THREE.Scene();
+                let camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 800);
+                let axes = new THREE.AxesHelper(30);
+                let control = controls[i];
+                // 初始化OrbitControls，使得用户可以通过鼠标控制来旋转、缩放和平移场景。
+                control = new OrbitControls(camera, renderer.domElement);
+                control.addEventListener('change', render);
+                // 设置相机的位置，并将相机、场景、控制器关联到当前视图。
+                camera.position.set(0, 0, 30);
+                view.camera = camera;
+                view.scene = scene;
+                view.control = control;
+                // 将坐标轴辅助工具添加到场景中。
+                view.scene.add(axes);
+            }
+            // 创建一个新的Stats实例，用于监控和显示页面的性能数据（如帧率）
+            stat = new Stats();
+            // 设置Stats元素的样式和位置，并将其添加到文档body中
+            stat.domElement.style.position = 'absolute';
+            stat.domElement.style.left = '0px';
+            stat.domElement.style.top = '0px';
+            document.body.appendChild(stat.domElement);
+
+            render();
+
+        }
+
+        // 异步函数，用于处理点云数据，并提取关键点
+        async function ISSKeypoint() {
+            // 使用PCDLoader加载点云数据
+            let or_cloud = new PCDLoader().parse(data, '');
+            // 将加载的点云数据中心化（.center()），这通常是为了将点云置于场景的中心。
+            or_cloud.geometry.center();
+            // 将原始点云添加到第一个视图的场景中
+            views[0].scene.add(or_cloud);
+            // ISSKeypoint3D提取关键点
+            // 计算点云的分辨率。
+            const resolution = PCL.computeCloudResolution(cloud);
+            // 创建一个Kd树，这是一种用于快速空间搜索的数据结构。
+            const tree = new PCL.SearchKdTree();
+            // 创建一个新的空点云对象，用于存放关键点
+            const keypoints = new PCL.PointCloud();
+            // 初始化一个ISS关键点检测器（PCL.ISSKeypoint3D），并配置其参数，这些参数从之前定义的param对象中获取。
+            const iss = new PCL.ISSKeypoint3D();
+
+            // 通过一系列set方法配置ISS检测器的参数。这些参数从之前定义的param对象中获取，包括显著半径、非最大半径、阈值等。
+            iss.setSearchMethod(tree);
+            iss.setSalientRadius(param.keypoint.salientRadius * resolution);
+            iss.setNonMaxRadius(param.keypoint.maxRadius * resolution);
+            iss.setThreshold21(param.keypoint.threshold21);
+            iss.setThreshold32(param.keypoint.threshold32);
+            iss.setMinNeighbors(param.keypoint.minNeighbors);
+            iss.setInputCloud(cloud);
+            // 调用iss.compute(keypoints)提取关键点，结果存储在keypoints中。
+            iss.compute(keypoints);
+            // 保存点云模型，将关键点数据保存为ASCII格式的PCD文件。
+            const cloudKeyPointData = PCL.savePCDDataASCII(keypoints);
+            // 如果已有关键点点云（cloudKeyPoint）显示在场景中，先将其移除
+            if (cloudKeyPoint) {
+                views[0].scene.remove(cloudKeyPoint);
+            }
+            // 使用loader.parse加载并解析新的关键点数据，创建一个新的点云对象
+            cloudKeyPoint = loader.parse(cloudKeyPointData, '');
+            // 设置点云的材质，这里使用红色以突出显示关键点
+            const material = new THREE.PointsMaterial({
+                size: 0.2,
+                color: 0xff0000,
+            });
+            cloudKeyPoint.material = material;
+            cloudKeyPoint.geometry.center();
+            // 将关键点点云添加到场景中
+            views[0].scene.add(cloudKeyPoint);
+            render();
+
+            // 使用new GUI()创建一个新的图形用户界面，并设置标题为“关键点提取”
+            var gui = new GUI().title("关键点提取");
+            gui.domElement.style.position = 'absolute';
+            gui.domElement.style.left = '33%';
+            // 向GUI中添加一个控制器，关联到param.keypoint.showCloud属性。这个控制器允许用户切换点云的显示与隐藏。
+            // 使用onChange监听器来响应用户的操作。如果showCloud为true，则将点云添加到场景中并重新渲染；如果为false，则从场景中移除点云并重新渲染。
+            gui.add(param.keypoint, 'showCloud').name("是否处理").onChange(function () {
+                if (param.keypoint.showCloud) {
+                    views[0].scene.add(cloudKeyPoint);
+                    render();
+                } else {
+                    views[0].scene.remove(cloudKeyPoint);
+                    render();
+                }
+            });
+            // 向GUI中添加一个控制器，用于调整点云材质的颜色。这个控制器允许用户更改点云的颜色。
+            // 当用户更改颜色时，onChange事件将更新点云材质的颜色，并重新渲染场景
+            gui.addColor(material, 'color').name("color").onChange(function (value) {
+                material.color = value;
+                render();
+            });
+            // 向GUI中添加一个控制器，用于调整点云材质的大小（点大小）。
+            // 当用户更改点大小时，onChange事件将更新点云材质的大小，并重新渲染场景
+            gui.add(material, 'size', 0, 1).name("pointsize").onChange(function (value) {
+                material.size = value;
+                render();
+            });
+            // 创建一个名为“参数设置”的新文件夹，用于存放与点云关键点提取相关的参数控制器
+            var folder = gui.addFolder("参数设置");
+            // 为各个参数如salientRadius、maxRadius、threshold21、threshold32、minNeighbors添加控制器，并设置相应的范围
+            // 在每个参数值更改时，通过onChange事件调用ISSKeypoint()函数，这可能会使用新的参数值重新计算点云的关键点。
+            folder.add(param.keypoint, 'salientRadius', 1, 10).name("salient radius").onChange(function (value) { ISSKeypoint(); });
+            folder.add(param.keypoint, 'maxRadius', 1, 10).name("max radius").onChange(function (value) { ISSKeypoint(); });
+            folder.add(param.keypoint, 'threshold21', 0, 5).name("threshold21").onChange(function (value) { ISSKeypoint(); });
+            folder.add(param.keypoint, 'threshold32', 0, 5).name("threshold32").onChange(function (value) { ISSKeypoint(); });
+            folder.add(param.keypoint, 'minNeighbors', 0, 10).name("min neighbors").onChange(function (value) { ISSKeypoint(); });
+            folder.close();
+            render();
+
+        }
+
+        // 使用了PCL（点云库）和Three.js来实现点云的体素网格过滤，并通过GUI提供用户交互
+        async function VoxelGrid() {
+            let or_cloud = new PCDLoader().parse(data, '');
+            or_cloud.geometry.center();
+            or_cloud.material.color = new THREE.Color(0x008000);
+            //VoxelGrid 网格过滤去除异常值
+            // 创建一个新的体素网格过滤器对象voxelGridFilter。
+            const voxelGridFilter = new PCL.VoxelGrid();
+            // 设置过滤器的输入点云为cloud
+            voxelGridFilter.setInputCloud(cloud);
+            // 根据param.voxelGrid.leafSize设置体素网格的叶子大小。这决定了过滤的粒度
+            voxelGridFilter.setLeafSize(param.voxelGrid.leafSize, param.voxelGrid.leafSize, param.voxelGrid.leafSize);
+            // 过滤点云并保存过滤后的点云数据
+            const cloudFilteredData = PCL.savePCDDataASCII(voxelGridFilter.filter(new PCL.PointCloud()));
+            // 如果已经存在过滤后的点云（CloudFiltered），则先将其从场景中移除。
+            if (CloudFiltered) {
+                views[1].scene.remove(CloudFiltered);
+            }
+            // 解析过滤后的点云数据，并创建一个新的点云对象CloudFiltered。
+            CloudFiltered = loader.parse(cloudFilteredData, '');
+            const material = new THREE.PointsMaterial({
+                size: 0.15,
+                color: 0x008000,
+            });
+            CloudFiltered.material = material;
+            CloudFiltered.geometry.center();
+            views[1].scene.add(CloudFiltered);
+            render();
+            var gui = new GUI().title("网格过滤");
+            gui.domElement.style.position = 'absolute';
+            gui.domElement.style.top = '0';
+
+            gui.add(param.keypoint, 'showCloud').name("是否处理").onChange(function () {
+                if (param.keypoint.showCloud) {
+                    views[1].scene.add(CloudFiltered);
+                    views[1].scene.remove(or_cloud);
+                    render();
+                } else {
+                    views[1].scene.remove(CloudFiltered);
+                    views[1].scene.add(or_cloud);
+                    render();
+                }
+            });
+            gui.addColor(material, 'color').name("point color").onChange(function (value) {
+                material.color = value;
+                render();
+            });
+            gui.add(material, 'size', 0, 1).name("point size").onChange(function (value) {
+                material.size = value;
+                render();
+            });
+            var folder = gui.addFolder("参数设置");
+            folder.add(param.voxelGrid, 'leafSize', 0.5, 5).name("leaf size").onChange(function () {
+                VoxelGrid();
+            });
+            folder.close();
+            render();
+        }
+
+        async function Icp() {
+            // 使用了PCL（点云库）和Three.js来实现点云数据的迭代最近点（Iterative Closest Point, ICP）算法处理。ICP算法通常用于对齐两个空间中的点云
+            // 使用 PCDLoader().parse 加载两个不同的点云数据，分别命名为 or_cloud21 和 or_cloud22。
+            let or_cloud21 = new PCDLoader().parse(bun0, '');
+            let or_cloud22 = new PCDLoader().parse(bun4, '');
+            // 设置两个点云的材质大小和颜色，以便在视觉上区分它们。or_cloud21 设置为蓝色，or_cloud22 设置为黄色。
+            or_cloud21.material.size = 0.15;
+            or_cloud22.material.size = 0.15;
+            or_cloud21.material.color = new THREE.Color(0x0000FF);
+            or_cloud22.material.color = new THREE.Color(0xFFFF00);
+            // 将两个点云的几何中心移至坐标原点，并对它们进行缩放，以便在视图中合适地展示
+            or_cloud21.geometry.center();
+            or_cloud22.geometry.center();
+            or_cloud21.geometry.scale(80, 80, 80);
+            or_cloud22.geometry.scale(80, 80, 80);
+            // 将这两个点云添加到第三个视图的场景中
+            views[2].scene.add(or_cloud21);
+            views[2].scene.add(or_cloud22);
+            //icp 点云融合
+            // 加载两个点云数据作为ICP算法的输入。source 和 target 分别表示要对齐的源点云和目标点云。
+            let source = PCL.loadPCDData(bun0, PCL.PointXYZ);
+            let target = PCL.loadPCDData(bun4, PCL.PointXYZ);
+            // 创建一个新的点云对象 final，用于存储ICP算法的输出
+            let final = new PCL.PointCloud(PCL.PointXYZ);
+            const icp = new PCL.IterativeClosestPoint();
+            // 初始化ICP算法的实例，并设置相关参数，这些参数包括最大迭代次数、变换的极小值和最大对应距离。这些参数从之前定义的 param.icp 对象中获取。
+            icp.setInputSource(source);
+            icp.setInputTarget(target);
+            icp.setMaximumIterations(param.icp.maxIterations);
+            icp.setTransformationEpsilon(param.icp.transformationEpsilon);
+            icp.setMaxCorrespondenceDistance(param.icp.maxCorrespondenceDistance);
+            // 调用 icp.align(final) 对齐两个点云，并将结果存储在 final 中。
+            icp.align(final);
+
+            const cloudicpData = PCL.savePCDDataASCII(final);
+            if (cloudicp) {
+                views[2].scene.remove(cloudicp);
+            }
+            cloudicp = loader.parse(cloudicpData, '');
+            const material = new THREE.PointsMaterial({
+                size: 0.2,
+                color: 0xff0000,
+            });
+            cloudicp.geometry.scale(80, 80, 80);
+            cloudicp.geometry.center();
+            cloudicp.material = material;
+            render();
+
+            var gui = new GUI().title("点云融合");
+            gui.domElement.style.position = 'absolute';
+            gui.domElement.style.left = '33%';
+            gui.domElement.style.top = '50%';
+            gui.add(param.icp, 'showCloud').name("是否处理").onChange(function () {
+                if (param.icp.showCloud) {
+                    views[2].scene.remove(or_cloud21);
+                    views[2].scene.remove(or_cloud22);
+                    views[2].scene.add(cloudicp);
+                    render();
+                } else {
+                    views[2].scene.remove(cloudicp);
+                    views[2].scene.add(or_cloud21);
+                    views[2].scene.add(or_cloud22);
+                    render();
+                }
+            })
+            gui.addColor(material, 'color').name("color").onChange(function (value) {
+                material.color = value;
+                render();
+            });
+            gui.add(material, 'size', 0, 1).name("pointsize").onChange(function (value) {
+                material.size = value;
+                render();
+            });
+            var folder = gui.addFolder("参数设置");
+            folder.add(param.icp, 'maxIterations', 10, 100).name("max Iterations").onChange(function () { Icp(); });
+            folder.add(param.icp, 'transformationEpsilon', 0, 1e-1).name("transformation Epsilon").onChange(function () { Icp(); });
+            folder.add(param.icp, 'maxCorrespondenceDistance', 0, 0.2).name("max Correspondence Distance").onChange(function () { Icp(); });
+            folder.close();
+            render();
+        }
+
+        async function Kdtree() {
+            // 使用 PCDLoader().parse 加载点云数据，并创建一个名为 or_cloud 的点云对象。
+            let or_cloud = new PCDLoader().parse(data, '');
+            // 将这个点云添加到第四个视图的场景中
+            views[3].scene.add(or_cloud);
+            //kdtree 临近点
+            // 创建一个新的k-d树实例 kdtree
+            const kdtree = new PCL.KdTreeFLANN();
+            // 设置k-d树的epsilon值（搜索时的容错率）
+            kdtree.setEpsilon(param.kdtree.epsilon);
+            // 将点云 cloud 设置为k-d树的输入
+            kdtree.setInputCloud(cloud);
+            // 创建一个搜索原点 origin，根据 param.kdtree 中的设置确定其位置。
+            const origin = new PCL.PointXYZ(param.kdtree.origin.x,
+                param.kdtree.origin.y, param.kdtree.origin.z);
+            // 使用 kdtree.nearestKSearch 执行最近邻搜索，找到距离原点最近的kth个点。
+            const result = kdtree.nearestKSearch(origin, param.kdtree.kth);
+
+            // 将找到的最近邻点的位置信息收集到数组 pos 中
+            const pos = [];
+            for (let i = 0; i < result.indices.data.length; ++i) {
+                const point = cloud.points.get(result.indices.data[i]);
+                pos.push(point.x, point.y, point.z);
+            }
+            // 创建一个新的 THREE.BufferGeometry 对象并设置其位置属性
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            // 定义材质，并设置点的大小和颜色（这里是红色）
+            const material = new THREE.PointsMaterial({ size: 0.2, color: 0xff0000 });
+            // 如果之前已有显示的点云对象（mesh），先将其从场景中移除。
+            if (mesh) {
+                views[3].scene.remove(mesh);
+            }
+            // 创建一个新的点云对象 mesh 并将其添加到场景中。
+            mesh = new THREE.Points(geometry, material);
+            views[3].scene.add(mesh);
+
+
+            // 类似地，创建并显示一个表示搜索原点的点云对象，这里使用紫色以区分
+            const or_pos = [origin.x, origin.y, origin.z];
+            const geometry_or = new THREE.BufferGeometry();
+            geometry_or.setAttribute('position', new THREE.Float32BufferAttribute(or_pos, 3));
+            const material_or = new THREE.PointsMaterial({ size: 0.6, color: 0x9400D3 });
+            if (mesh_or) {
+                views[3].scene.remove(mesh_or);
+            }
+            mesh_or = new THREE.Points(geometry_or, material_or);
+            views[3].scene.add(mesh_or);
+
+            // 更新场景，展示最近邻搜索的结果
+            render();
+
+            var gui = new GUI().title("临近点");
+            gui.domElement.style.position = 'absolute';
+            gui.domElement.style.right = '0';
+            gui.domElement.style.top = '50%';
+            gui.add(param.kdtree, 'showCloud').name("是否处理").onChange(function () {
+                if (param.kdtree.showCloud) {
+                    views[3].scene.add(mesh);
+                    render();
+                } else {
+                    views[3].scene.remove(mesh);
+                    render();
+                }
+            })
+            gui.addColor(material, 'color').name("color").onChange(function (value) {
+                material.color = value;
+                render();
+            });
+            gui.add(material, 'size', 0, 1).name("pointsize").onChange(function (value) {
+                material.size = value;
+                render();
+            });
+            var folder = gui.addFolder("参数设置");
+            folder.add(param.kdtree.origin, 'x', 0, 15).name("x").onChange(function (value) { Kdtree(); });
+            folder.add(param.kdtree.origin, 'y', 0, 15).name("y").onChange(function (value) { Kdtree(); });
+            folder.add(param.kdtree.origin, 'z', 0, 15).name("z").onChange(function (value) { Kdtree(); });
+            folder.add(param.kdtree, 'kth', 0, 100).name("kdtree length").onChange(function (value) { Kdtree(); });
+            folder.add(param.kdtree, 'epsilon', 0, 0.1).name("epsilon").onChange(function (value) { Kdtree(); });
+            folder.close();
+            render();
+
+        }
+
+        async function main() {
+            // 使用 fetch 函数异步加载三个点云文件。这些文件被转换为数组缓冲区（arrayBuffer），以便进一步处理。
+            // data、bun0、和 bun4 分别保存各自点云文件的数据
+            data = await fetch('images/rabbit.pcd').then(res => res.arrayBuffer());
+            bun0 = await fetch("./images/bun0.pcd").then((res) => res.arrayBuffer());
+            bun4 = await fetch("./images/bun4.pcd").then((res) => res.arrayBuffer());
+            // 初始化PCL库。这里加载了PCL的WebAssembly（WASM）模块，以便在Web环境中高效地执行点云处理
+            await PCL.init({
+                url: 'https://cdn.jsdelivr.net/npm/pcl.js/dist/pcl-core.wasm'
+            });
+            // 将加载的点云数据data转换为PCL可以处理的格式。这里使用了PointXYZ类型，这是一种常用的点云数据格式。
+            cloud = PCL.loadPCDData(data, PCL.PointXYZ);
+            // 依次调用之前定义的点云处理函数。这些函数分别实现了不同的点云处理任务：
+            // ISSKeypoint：提取点云中的关键点。
+            // VoxelGrid：应用体素网格过滤，可能用于降低点云数据的复杂性。
+            // Icp：使用迭代最近点算法对齐两个点云。
+            // Kdtree：使用k - d树进行最近邻搜索。
+            ISSKeypoint();
+            VoxelGrid();
+            Icp();
+            Kdtree();
+            render();
+        }
+
+        function updateSize() {
+
+            if (windowWidth != window.innerWidth || windowHeight != window.innerHeight) {
+
+                windowWidth = window.innerWidth;
+                windowHeight = window.innerHeight;
+
+                renderer.setSize(windowWidth, windowHeight);
+
+            }
+
+        }
+
+        function animate() {
+            // 这个循环遍历前三个视图（假设 views 是一个包含多个视图的数组）
+            // 对每个视图，调用其控制器的 update 方法。这可能是为了处理用户输入，如鼠标移动、缩放等，从而使视图响应用户的交互。
+            for (var i = 0; i < 3; i++) {
+                views[i].control.update();
+            }
+            // 调用 render 函数来渲染场景。这个函数可能负责实际的绘图操作，如绘制点云、更新光源、渲染3D对象等。
+            render();
+            // 更新性能监测工具 stat（假设这是一个实例化的Stats对象）。这通常用于监视和显示网页的性能指标，如每秒帧数（FPS）。
+            stat.update();
+            // 使用 requestAnimationFrame 方法来请求下一帧的动画。这个方法告诉浏览器你希望执行动画，并请求浏览器在下次重绘之前调用指定的函数（在这里是 animate 函数本身）。
+            requestAnimationFrame(animate);
+
+        }
+
+        function render() {
+
+            // 调用 updateSize 函数来更新渲染相关的尺寸信息。这个函数可能会检查和调整渲染器或画布的大小以适应窗口大小的变化。
+            updateSize();
+
+            // 循环遍历 views 数组，其中每个 view 包含有关相机、场景和视图尺寸的信息。
+            for (let i = 0; i < views.length; ++i) {
+
+                const view = views[i];
+                let camera = view.camera;
+                let scene = view.scene;
+
+                // 计算每个视图在窗口中的位置和大小。这些值是基于整个窗口宽度和高度的百分比来确定的
+                const left = Math.floor(windowWidth * view.left);
+                const bottom = Math.floor(windowHeight * view.bottom);
+                const width = Math.floor(windowWidth * view.width);
+                const height = Math.floor(windowHeight * view.height);
+
+                // 设置渲染器的视口以匹配当前视图的尺寸和位置
+                renderer.setViewport(left, bottom, width, height);
+                // 确保渲染器只渲染当前视口的一部分，这对于在同一画布上渲染多个视图很有用。
+                renderer.setScissor(left, bottom, width, height);
+                renderer.setScissorTest(true);
+                //  设置当前视图的背景色。
+                renderer.setClearColor(view.background);
+
+                // 更新相机的纵横比和投影矩阵，确保场景正确地适应其视口
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+                // 调用实际渲染当前视图的场景和相机
+                renderer.render(scene, camera);
+
+            }
+
+        }
+    </script>
+</body>
+
+</html>

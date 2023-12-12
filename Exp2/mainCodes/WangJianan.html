@@ -1,0 +1,683 @@
+
+<html>
+
+<head>
+    <title>王嘉楠 实验2</title>
+    <style type="text/css">
+        body {
+            margin: 0;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+
+    <script type="importmap">
+          {
+              "imports":{
+                  "three":"./js/three.module.js",
+                  "three/":"./js/"
+                  
+              }
+          }
+      </script>
+    <script src="./js/pcl.js"></script>
+    <script src="./js/dat.gui.min.js"></script>
+</head>
+
+<body>
+
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from './js/OrbitControls.js';
+        import { PCDLoader } from './js/PCDLoader.js';
+
+
+        var gui = new dat.GUI();
+        var t = true; var t2 = true; var t3 = true; var t4 = true;
+        var c, c2, c3, c4;
+        var cloudFilteredData;
+
+        // 创建场景
+        const scene1 = new THREE.Scene();
+        const scene2 = new THREE.Scene();
+        const scene3 = new THREE.Scene();
+        const scene4 = new THREE.Scene();
+
+        // 创建相机
+        const aspectRatio = window.innerWidth / (2 * window.innerHeight);
+        const camera1 = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 1000);
+        const camera2 = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 1000);
+        const camera3 = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 1000);
+        const camera4 = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 1000);
+        camera1.position.set(0, 0, 3);
+        camera2.position.set(3, 0, 0);
+        camera3.position.set(0, -3, 0);
+        camera4.position.set(3, 3, 3);
+        camera1.lookAt(0, 0, 0);
+        camera2.lookAt(0, 0, 0);
+        camera3.lookAt(0, 0, 0);
+        camera4.lookAt(0, 0, 0);
+        // 创建渲染器
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+
+
+        // 渲染函数
+        function animate() {
+            requestAnimationFrame(animate);
+            // 设置第一个物体的视口和背景颜色
+            renderer.setScissorTest(true);
+            renderer.setScissor(0, 0, window.innerWidth / 2, window.innerHeight / 2);
+            renderer.setViewport(0, 0, window.innerWidth / 2, window.innerHeight / 2);
+            renderer.setClearColor(0x0000ff);
+            renderer.render(scene1, camera1);
+
+            // 设置第二个物体的视口和背景颜色
+            renderer.setScissor(window.innerWidth / 2, 0, window.innerWidth / 2, window.innerHeight / 2);
+            renderer.setViewport(window.innerWidth / 2, 0, window.innerWidth / 2, window.innerHeight / 2);
+            renderer.setClearColor(0xFFD700);
+            renderer.render(scene2, camera2);
+
+
+            // 设置第二个物体的视口和背景颜色
+            renderer.setScissor(0, window.innerHeight / 2, window.innerWidth / 2, window.innerHeight / 2);
+            renderer.setViewport(0, window.innerHeight / 2, window.innerWidth / 2, window.innerHeight / 2);
+            renderer.setClearColor(0x000000);
+            renderer.render(scene3, camera3);
+
+
+            // 设置第二个物体的视口和背景颜色
+            renderer.setScissor(window.innerWidth / 2, window.innerHeight / 2, window.innerWidth / 2, window.innerHeight / 2);
+            renderer.setViewport(window.innerWidth / 2, window.innerHeight / 2, window.innerWidth / 2, window.innerHeight / 2);
+            renderer.setClearColor(0x9ed048);
+            renderer.render(scene4, camera4);
+        }
+
+        // 启动动画循环
+
+        const control1 = new OrbitControls(camera1, renderer.domElement);
+        const control2 = new OrbitControls(camera2, renderer.domElement);
+        const control3 = new OrbitControls(camera3, renderer.domElement);
+        const control4 = new OrbitControls(camera4, renderer.domElement);
+        control1.addEventListener('change', function () {
+            renderer.render(scene1, camera1);
+            renderer.render(scene2, camera2);
+            renderer.render(scene3, camera3);
+            renderer.render(scene4, camera4);
+        });
+
+        let cloud;
+        let cloudFiltered;
+        //scene1
+        var Stddev = 0.5;
+        var Stddev_ = 0.5;
+        let point1, point12;
+        async function main1() {
+            const cloudBuffer = await fetch("./images/pl2.pcd").then((res) =>
+                res.arrayBuffer()
+            );
+
+            await PCL.init({
+                url: `./images/pcl-core.wasm`
+            });
+
+            cloud = PCL.loadPCDData(cloudBuffer, PCL.PointXYZ);
+            const start = Date.now();
+            const sor = new PCL.StatisticalOutlierRemoval();
+            sor.setInputCloud(cloud);
+            sor.setMeanK(40);
+            sor.setStddevMulThresh(Stddev_);
+            cloudFiltered = sor.filter();
+
+            console.log((Date.now() - start) / 1000);
+            cloudFilteredData = PCL.savePCDDataASCII(cloudFiltered);
+            showPointCloud1();
+
+        }
+
+        function showPointCloud1() {
+            const decoder = new TextDecoder('utf-8');
+            const pcdString = decoder.decode(new Uint8Array(cloudFilteredData));
+
+            // 从字符串创建 Blob
+            const blob = new Blob([pcdString], { type: 'text/plain' });
+
+            // 从 Blob 创建 URL
+            const url = URL.createObjectURL(blob);
+
+            // 创建点云加载器
+            const loader = new PCDLoader();
+            loader.load(url,
+                function (points) {
+
+                    points.geometry.center();
+                    points.material.size = 0.001;
+                    points.material.color = new THREE.Color(0x00ffff); // 模型颜色
+                    scene1.add(points);
+                    points.position.set(0, 0, 0);
+                    renderer.render(scene1, camera1);
+                    const numPoints = points.geometry.getAttribute('position').count;
+                    var s_yvchuli = numPoints;
+                    var data1 = {
+                        s_yvchuli,
+                    };
+                    c = folder.add(data1, 's_yvchuli');
+                    point1 = points;
+                    t = false;
+                },
+                function (xhr) {
+                },
+                function (error) {
+                    console.log('An error happened');
+                }
+            );
+
+        }
+        //scene2
+        let point2, point22, point23;
+        let keypoints;
+        let source;
+        let target;
+        let final;
+        var MaximumIterations = 50;
+        var MaximumIterations_ = 50;
+        async function main2() {
+            const cloudBuffer = await fetch("./images/pl2.pcd").then((res) =>
+                res.arrayBuffer()
+            );
+
+            await PCL.init({
+                url: `./images/pcl-core.wasm`
+            });
+            const bun0 = await fetch("./images/bun0.pcd").then((res) =>
+                res.arrayBuffer()
+            );
+            const bun4 = await fetch("./images/bun4.pcd").then((res) =>
+                res.arrayBuffer()
+            );
+            source = PCL.loadPCDData(bun0, PCL.PointXYZ);
+            target = PCL.loadPCDData(bun4, PCL.PointXYZ);
+            final = new PCL.PointCloud(PCL.PointXYZ);
+            const time = Date.now();
+            const icp = new PCL.IterativeClosestPoint();
+            icp.setInputSource(source);
+            icp.setInputTarget(target);
+            icp.setMaximumIterations(MaximumIterations_);
+            icp.setTransformationEpsilon(1e-8);
+            icp.setMaxCorrespondenceDistance(0.05);
+            icp.align(final);
+            console.log("ICP", Date.now() - time, "ms");
+
+            cloudFilteredData = PCL.savePCDDataASCII(final);
+
+            showPointCloud2();
+
+        }
+
+        function showPointCloud2() {
+
+            const decoder = new TextDecoder('utf-8');
+            const pcdString = decoder.decode(new Uint8Array(cloudFilteredData));
+
+            // 从字符串创建 Blob
+            const blob = new Blob([pcdString], { type: 'text/plain' });
+
+            // 从 Blob 创建 URL
+            const url2 = URL.createObjectURL(blob);
+
+
+
+            // 创建点云加载器
+            const loader = new PCDLoader();
+            loader.load(url2,
+                function (points) {
+
+                    points.geometry.center();
+                    points.material.size = 0.005;
+                    points.material.color = new THREE.Color(0x00ffff); // 模型颜色
+
+                    points.position.set(0, 0, 0);
+                    scene2.add(points);
+                    renderer.render(scene2, camera2);
+                    const numPoints = points.geometry.getAttribute('position').count;
+                    var s_ronghe = numPoints;
+                    var data2 = {
+                        s_ronghe,
+                    };
+                    c2 = folder2.add(data2, 's_ronghe');
+                    point2 = points;
+                    t2 = false;
+                },
+                function (xhr) {
+                },
+                function (error) {
+                    console.log('An error happened');
+                }
+            );
+        }
+
+        //scene3
+        let point3, point33;
+        let coloredCloud;
+        var Sigma = 0.25;
+        var SourceWeight = 0.8;
+        var NumberOfNeighbours = 14;
+        var Sigma_ = 0.25;
+        var SourceWeight_ = 0.8, NumberOfNeighbours_ = 14;
+        async function main3() {
+            const cloudBuffer = await fetch("./images/cut.pcd").then((res) =>
+                res.arrayBuffer()
+            );
+
+            await PCL.init({
+                url: `./images/pcl-core.wasm`
+            });
+
+            cloud = PCL.loadPCDData(cloudBuffer, PCL.PointXYZ);
+            const objectCenter = new PCL.PointXYZ(68.97, -18.55, 0.57);
+            const foregroundPoints = new PCL.PointCloud();
+            foregroundPoints.addPoint(objectCenter);
+
+            const seg = new PCL.MinCutSegmentation();
+            seg.setForegroundPoints(foregroundPoints);
+            seg.setInputCloud(cloud);
+            seg.setRadius(3.0433856);
+            seg.setSigma(Sigma_);
+            seg.setSourceWeight(SourceWeight_);
+            seg.setNumberOfNeighbours(NumberOfNeighbours_);
+            seg.extract();
+            coloredCloud = seg.getColoredCloud();
+            cloudFilteredData = PCL.savePCDDataASCII(coloredCloud);
+            showPointCloud3();
+
+        }
+
+        function showPointCloud3() {
+            const decoder = new TextDecoder('utf-8');
+            const pcdString = decoder.decode(new Uint8Array(cloudFilteredData));
+
+            // 从字符串创建 Blob
+            const blob = new Blob([pcdString], { type: 'text/plain' });
+
+            // 从 Blob 创建 URL
+            const url = URL.createObjectURL(blob);
+
+
+
+            // 创建点云加载器
+            const loader = new PCDLoader();
+            loader.load(url,
+                function (points) {
+
+                    points.geometry.center();
+                    points.material.size = 0.01;
+                    points.material.color = new THREE.Color(0x00ffff); // 模型颜色
+                    scene3.add(points);
+                    points.position.set(0, 0, 0);
+                    renderer.render(scene3, camera3);
+                    const numPoints = points.geometry.getAttribute('position').count;
+
+
+                    var s_cut = numPoints;
+                    var data3 = {
+                        s_cut,
+                    };
+                    c3 = folder3.add(data3, 's_cut');
+                    point3 = points;
+                    t3 = false;
+                },
+                function (xhr) {
+                },
+                function (error) {
+                    console.log('An error happened');
+                }
+            );
+        }
+        //scene4
+        let point4, point44;
+        var Threshold = 0.975, MinNeighbors = 5, Threshold_ = 0.975, MinNeighbors_ = 5;;
+        async function main4() {
+            const cloudBuffer = await fetch("./images/pl2.pcd").then((res) =>
+                res.arrayBuffer()
+            );
+
+            await PCL.init({
+                url: `./images/pcl-core.wasm`
+            });
+
+            cloud = PCL.loadPCDData(cloudBuffer, PCL.PointXYZ);
+            const resolution = PCL.computeCloudResolution(cloud);
+            const tree = new PCL.SearchKdTree();
+            keypoints = new PCL.PointCloud();
+            const iss = new PCL.ISSKeypoint3D();
+
+            iss.setSearchMethod(tree);
+            iss.setSalientRadius(6 * resolution);
+            iss.setNonMaxRadius(4 * resolution);
+            iss.setThreshold21(Threshold_);
+            iss.setThreshold32(Threshold_);
+            iss.setMinNeighbors(MinNeighbors_);
+            iss.setInputCloud(cloud);
+            iss.compute(keypoints);
+
+            cloudFilteredData = PCL.savePCDDataASCII(keypoints);
+            showPointCloud4();
+
+        }
+
+        function showPointCloud4() {
+            const decoder = new TextDecoder('utf-8');
+            const pcdString = decoder.decode(new Uint8Array(cloudFilteredData));
+
+
+
+
+            // 从字符串创建 Blob
+            const blob = new Blob([pcdString], { type: 'text/plain' });
+
+            // 从 Blob 创建 URL
+            const url = URL.createObjectURL(blob);
+
+            // 创建点云加载器
+            const loader = new PCDLoader();
+            loader.load(url,
+                function (points) {
+                    points.geometry.center();
+                    points.material.size = 0.001;
+                    points.material.color = new THREE.Color(0xffffff); // 模型颜色
+                    scene4.add(points);
+                    points.position.set(0, 0, 0);
+                    renderer.render(scene4, camera4);
+                    const numPoints = points.geometry.getAttribute('position').count;
+
+
+
+                    var s_key = numPoints;
+                    var data4 = {
+                        s_key,
+                    };
+                    c4 = folder4.add(data4, 's_key');
+
+                    point4 = points;
+                },
+                function (xhr) {
+                },
+                function (error) {
+                    console.log('An error happened');
+                }
+            );
+        }
+
+        main1();
+        main2();
+        main3();
+        main4();
+
+        //按钮1
+        var attributesFolder = gui.addFolder('yvchu');
+        gui.domElement.style.left = '0px';
+        var controls1 = new function () {
+            this.yvchuli = function () {
+                main1();
+                scene1.remove(point12);
+
+            }
+            this.yvchuli_off = function () {
+
+                const loader1 = new PCDLoader();
+                loader1.load('./images/pl2.pcd',
+                    function (points) {
+                        points.geometry.center();
+                        points.material.size = 0.001;
+                        points.material.color = new THREE.Color(0x00ff00); // 模型颜色
+                        scene1.add(points);
+                        points.position.set(0, 0, 0);
+                        renderer.render(scene1, camera1);
+                        const numPoints = points.geometry.getAttribute('position').count;
+
+                        point12 = points;
+                    },
+                    function (xhr) {
+                    },
+                    function (error) {
+                        console.log('An error happened');
+                    }
+                );
+                scene1.remove(point1);
+            }
+        }
+        const folder = attributesFolder.addFolder(`scene1:yvchuli`);
+        folder.add(controls1, 'yvchuli');
+        folder.add(controls1, 'yvchuli_off');
+
+        var one = {
+            Stddev,
+        };
+        var con = folder.add(one, "Stddev", 0.1, 5.0);
+        con.onChange(function (value) {
+            Stddev_ = value;
+            scene1.remove(point1);
+            folder.remove(c);
+            main1();
+        })
+
+
+
+
+        //按钮2
+        var attributesFolder2 = gui.addFolder('Ronghe');
+        gui.domElement.style.left = '0px';
+        var controls2 = new function () {
+            this.RONGHE = function () {
+                main2();
+                scene2.remove(point22);
+                scene2.remove(point23);
+            }
+            this.RONGHE_off = function () {
+                const loader1 = new PCDLoader();
+                const loader2 = new PCDLoader();
+                loader1.load('./images/bun0.pcd',
+                    function (points) {
+                        points.geometry.center();
+                        points.material.size = 0.005;
+                        points.material.color = new THREE.Color(0xFF0000); // 模型颜色
+                        scene2.add(points);
+                        points.position.set(0, 0, 0);
+                        renderer.render(scene2, camera2);
+                        const numPoints = points.geometry.getAttribute('position').count;
+
+                        point23 = points;
+                    },
+                    function (xhr) {
+                    },
+                    function (error) {
+                        console.log('An error happened');
+                    }
+                );
+                loader2.load('./images/bun4.pcd',
+                    function (points) {
+                        points.geometry.center();
+                        points.material.size = 0.005;
+                        points.material.color = new THREE.Color(0x00ff00); // 模型颜色
+                        scene2.add(points);
+                        points.position.set(0, 0, 0);
+                        renderer.render(scene2, camera2);
+                        const numPoints = points.geometry.getAttribute('position').count;
+
+                        point22 = points;
+                    },
+                    function (xhr) {
+                    },
+                    function (error) {
+                        console.log('An error happened');
+                    }
+                );
+                scene2.remove(point2);
+            }
+        }
+        const folder2 = attributesFolder2.addFolder(`scene2:RONGHE`);
+        folder2.add(controls2, 'RONGHE');
+        folder2.add(controls2, 'RONGHE_off');
+
+        var two = {
+            MaximumIterations,
+        };
+        var con2 = folder2.add(two, "MaximumIterations", 30, 80);
+        con2.onChange(function (value) {
+            MaximumIterations_ = value;
+            scene2.remove(point2);
+            folder2.remove(c2);
+            main2();
+        })
+        //按钮3
+        var attributesFolder3 = gui.addFolder('Cut');
+        gui.domElement.style.left = '0px';
+        var controls3 = new function () {
+            this.cut = function () {
+                main3();
+                scene3.remove(point33);
+            }
+            this.cut_off = function () {
+
+                async function main() {
+                    const cloudBuffer = await fetch("./images/cut.pcd").then((res) =>
+                        res.arrayBuffer()
+                    );
+
+                    await PCL.init({
+                        url: `./images/pcl-core.wasm`
+                    });
+
+                    cloud = PCL.loadPCDData(cloudBuffer, PCL.PointXYZ);
+                    cloudFilteredData = PCL.savePCDDataASCII(cloud);
+                    const decoder = new TextDecoder('utf-8');
+                    const pcdString = decoder.decode(new Uint8Array(cloudFilteredData));
+
+                    // 从字符串创建 Blob
+                    const blob = new Blob([pcdString], { type: 'text/plain' });
+
+                    // 从 Blob 创建 URL
+                    const url = URL.createObjectURL(blob);
+                    const loader = new PCDLoader();
+                    loader.load(url,
+                        function (points) {
+                            points.geometry.center();
+                            points.material.size = 0.01;
+                            points.material.color = new THREE.Color(0xffffff); // 模型颜色
+                            scene3.add(points);
+                            points.position.set(0, 0, 0);
+                            renderer.render(scene3, camera3);
+                            point33 = points;
+                        },
+                        function (xhr) {
+                        },
+                        function (error) {
+                            console.log('An error happened');
+                        }
+                    );
+                }
+                main();
+                scene3.remove(point3);
+            }
+        }
+        const folder3 = attributesFolder3.addFolder(`scene3:cut`);
+        folder3.add(controls3, 'cut');
+        folder3.add(controls3, 'cut_off');
+        var three = {
+            Sigma,
+            SourceWeight,
+            NumberOfNeighbours
+        };
+        var con3 = folder3.add(three, "Sigma", 0.1, 1.0);
+        var con32 = folder3.add(three, "SourceWeight", 0.1, 1.0);
+        var con33 = folder3.add(three, "NumberOfNeighbours", 5, 30);
+        con3.onChange(function (value) {
+            Sigma_ = value;
+            scene3.remove(point3);
+            folder3.remove(c3);
+            main3();
+        })
+        con32.onChange(function (value) {
+            SourceWeight_ = value;
+            scene3.remove(point3);
+            folder3.remove(c3);
+            main3();
+        })
+        con33.onChange(function (value) {
+            NumberOfNeighbours_ = value;
+            scene3.remove(point3);
+            folder3.remove(c3);
+            main3();
+        })
+
+
+
+        //按钮4
+        var attributesFolder4 = gui.addFolder('Key');
+        gui.domElement.style.left = '0px';
+        var controls4 = new function () {
+
+            this.keypoint_off = function () {
+                const loader = new PCDLoader();
+                loader.load('./images/pl2.pcd',
+                    function (points) {
+
+                        points.geometry.center();
+                        points.material.size = 0.001;
+                        points.material.color = new THREE.Color(0x00ffff); // 模型颜色
+                        scene4.add(points);
+                        points.position.set(0, 0, 0);
+                        renderer.render(scene4, camera4);
+                        const numPoints = points.geometry.getAttribute('position').count;
+
+                        point44 = points;
+                    },
+                    function (xhr) {
+                    },
+                    function (error) {
+                        console.log('An error happened');
+                    }
+                );
+                scene4.remove(point4);
+
+            }
+            this.keypoint = function () {
+                main4();
+                scene4.remove(point44);
+            }
+        };
+        const folder4 = attributesFolder4.addFolder(`scene4:keypoint`);
+        folder4.add(controls4, 'keypoint');
+        folder4.add(controls4, 'keypoint_off');
+
+        var four = {
+            Threshold,
+            MinNeighbors
+        };
+        var con4 = folder4.add(four, "Threshold", 0.5, 2.0);
+        var con42 = folder4.add(four, "MinNeighbors", 1, 15);
+        con4.onChange(function (value) {
+            Threshold_ = value;
+            scene4.remove(point4);
+            folder4.remove(c4);
+            main4();
+        })
+        con42.onChange(function (value) {
+            MinNeighbors_ = value;
+            scene4.remove(point4);
+            folder4.remove(c4);
+            main4();
+        })
+
+
+        animate();
+    </script>
+</body>
+
+</html>

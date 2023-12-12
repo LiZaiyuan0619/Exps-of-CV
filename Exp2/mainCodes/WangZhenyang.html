@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="./js/pcl.js"></script>
+
+    <title>three.js webgl - PCL</title>
+    <style>
+        .canvas-container {
+            margin: 10px;
+            float: left;
+            border: 5px solid #000000;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+            background-color: black;
+            /* 将背景颜色设置为黑色 */
+        }
+
+        .gui-container {
+            position: relative;
+            background-color: rgb(0, 0, 0);
+            border: 1px solid #000000;
+            padding: 10px;
+            z-index: 1;
+            /* 保证 GUI 处于画布之上 */
+        }
+    </style>
+
+    <style>
+        #file-input {
+            display: none;
+        }
+
+        .button-container {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+        }
+
+        .custom-button {
+            background-color: #63c966;
+            color: rgb(0, 0, 0);
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .custom-button:hover {
+            background-color: #428a46;
+        }
+
+        #bottom-text {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background-color: transparent;
+            padding: 10px;
+            text-align: center;
+            justify-content: center;
+            /* 水平居中对齐 */
+            align-items: center;
+            /* 垂直居中对齐 */
+            padding-left: 20px;
+            /* 添加左侧内边距 */
+            padding-right: 20px;
+            /* 添加右侧内边距 */
+            padding-bottom: 20px;
+            /* 添加下侧内边距 */
+            font-size: 16px;
+            color: black;
+        }
+
+        #loading-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 5px;
+            text-align: center;
+            display: none;
+            z-index: 9999;
+        }
+
+        #loading-status {
+            padding: 20px;
+        }
+    </style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+</head>
+
+<body>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "./js/three.module.js"
+        }
+    }
+  </script>
+    <div class="button-container">
+        <input type="file" id="file-input" accept=".pcd" multiple>
+        <button class="custom-button" onclick="openFileDialog()">选择PCD文件</button>
+    </div>
+    <!-- 加载提示的容器 -->
+    <div id="loading-container">
+        <div id="loading-status">正在加载，请等候...</div>
+    </div>
+
+    <script type="module">
+
+        import * as THREE from 'three';
+        import { GUI } from './js/lil-gui.module.min.js'
+        import { OrbitControls } from './js/OrbitControls0.js'
+
+        // 创建 Three.js GUI
+        let allGui;
+        let guiArray = [];
+        let folderCount = 0;
+        let folderCountControl;
+        let cloudBuffer, cloud, sor, cloudFiltered, pointCloud;
+        let modelContainer;  // 用于存储每个模型的窗口容器
+        let containerIndex = 0;
+        let isVisible;
+
+        // 初始化 Three.js GUI
+        allGui = new GUI();
+        allGui.open();
+        allGui.domElement.style.position = 'absolute';
+        allGui.domElement.style.top = '80px';
+        allGui.domElement.style.right = '25px';
+        allGui.domElement.style.backgroundColor = '#000';  // 设置 GUI 的背景颜色为黑色
+        folderCountControl = allGui.add({ folderCount }, 'folderCount').name('Foldercount');
+
+        // 打开文件对话框函数
+        function openFileDialog() {
+            var fileInput = document.getElementById('file-input');
+            fileInput.multiple = true; // 添加此行以支持选择多个文件
+            fileInput.click();
+        }
+
+        // 导出 openFileDialog() 为全局变量
+        window.openFileDialog = openFileDialog;
+
+        // 在页面加载时调用加载默认点云函数
+        window.onload = function () {
+            loadDefaultPointCloud();
+        };
+        function clearAllContainers() {
+            // 获取所有具有 'canvas-container' 类的元素
+            let allContainers = document.querySelectorAll('.canvas-container');
+            folderCount = 0;//将文件数置为零
+            // 逐个移除所有容器
+            allContainers.forEach(container => {
+                container.remove();
+            });
+        }
+
+        // 创建按钮
+        let clearButton = document.createElement('button');
+        clearButton.textContent = 'Clear Screen';
+        clearButton.addEventListener('click', clearAllContainers);
+
+        // 将按钮添加到页面
+        document.body.appendChild(clearButton);
+
+
+        // 加载默认的点云
+        function loadDefaultPointCloud() {
+            var defaultPCDUrl = "images/bun1.pcd"; //默认点云文件
+            var defaultPCDUr2 = "images/bun2.pcd"; //默认点云文件
+
+            // 使用 fetch 获取默认点云的内容
+            fetch(defaultPCDUrl)
+                .then(response => response.text())
+                .then(pcdContent => {
+                    // 创建一个 Blob 对象，并设置类型
+                    var defaultPCDFile = new Blob([pcdContent], { type: "application/octet-stream" });
+                    defaultPCDFile.name = "bun1.pcd";
+                    // 加载和渲染默认的 PCD 文件
+                    loadAndRenderPCDFile(defaultPCDFile, 0, 0, 0, 0, 0);
+                })
+                .catch(error => {
+                    console.error("Error loading default point cloud:", error);
+                });
+            // 使用 fetch 获取默认点云的内容
+            fetch(defaultPCDUr2)
+                .then(response => response.text())
+                .then(pcdContent => {
+                    // 创建一个 Blob 对象，并设置类型
+                    var defaultPCDFile = new Blob([pcdContent], { type: "application/octet-stream" });
+                    defaultPCDFile.name = "bun2.pcd";
+                    // 加载和渲染默认的 PCD 文件
+                    loadAndRenderPCDFile(defaultPCDFile, 0, 0, 0, 0, 0);
+                })
+                .catch(error => {
+                    console.error("Error loading default point cloud:", error);
+                });
+        }
+
+        // 处理文件函数
+        document.getElementById('file-input').addEventListener('change', function (event) {
+            handleFiles(event.target.files);
+        });
+
+        // 处理所选文件
+        function handleFiles(files) {
+            for (var i = 0; i < files.length; i++) {
+                console.log(files[i].name); // 在控制台打印文件名
+                loadAndRenderPCDFile(files[i], 0, 0, 0, 0, 0);
+            }
+        }
+        function getRandomColor() {
+            // 生成随机的RGB颜色
+            var r = Math.floor(Math.random() * 256);
+            var g = Math.floor(Math.random() * 256);
+            var b = Math.floor(Math.random() * 256);
+
+            // 将RGB值转换为CSS颜色字符串
+            var color = `rgb(${r},${g},${b})`;
+
+            return color;
+        }
+
+        function removeOutliers(cloud) {
+            // 创建统计离群点移除对象
+            const sor = new PCL.StatisticalOutlierRemoval();
+
+            // 设置输入点云
+            sor.setInputCloud(cloud);
+
+            // 设置均值K值
+            sor.setMeanK(48);
+
+            // 设置标准差倍数阈值
+            sor.setStddevMulThresh(1.8);
+
+            // 进行离群点移除操作
+            const cloudFiltered = new PCL.PointCloud();
+            sor.filter(cloudFiltered);
+
+            if (cloudFiltered instanceof PCL.PointCloud) {
+                console.log("cloudFiltered is a point cloud");
+            } else {
+                console.log("cloudFiltered is not a point cloud");
+            }
+
+            // 返回经过离群点移除后的点云对象
+            return cloudFiltered;
+        }
+
+        async function Segmentation(cloud, center, file, scale) {
+
+            var radius = 1 / (100 * scale);
+            var weight = 0.8, objectCenter;
+            if (file.name == "bun2.pcd") { radius = 0.25; objectCenter = new PCL.PointXYZ(68.97, -18.55, 0.57) }
+            else if (file.name == "bun1.pcd") { objectCenter = new PCL.PointXYZ(center.x - 3, center.y - 1.1, center.z - 0.9) }
+            else { weight = 18; objectCenter = new PCL.PointXYZ(center.x, center.y, center.z) }
+            const foregroundPoints = new PCL.PointCloud();
+            foregroundPoints.addPoint(objectCenter);
+
+            const seg = new PCL.MinCutSegmentation();
+            seg.setForegroundPoints(foregroundPoints);
+            seg.setInputCloud(cloud);
+            seg.setRadius(3.0433856);//3.0433856
+            seg.setSigma(radius);
+            seg.setSourceWeight(weight);
+            seg.setNumberOfNeighbours(14);
+            seg.extract();
+            const coloredCloud = seg.getColoredCloud();
+
+            return coloredCloud;
+        }
+
+        async function computeISSKeypoints(cloud) {
+            // 获取点云分辨率
+            const resolution = PCL.computeCloudResolution(cloud);
+
+            // 创建搜索树
+            const tree = new PCL.SearchKdTree();
+
+            // 创建点云对象用于存储关键点
+            const keypoints = new PCL.PointCloud();
+
+            // 创建 ISS 关键点提取对象
+            const iss = new PCL.ISSKeypoint3D();
+
+            // 设置搜索方法
+            iss.setSearchMethod(tree);
+
+            // 设置关键点提取参数
+            iss.setSalientRadius(6 * resolution);
+            iss.setNonMaxRadius(4 * resolution);
+            iss.setThreshold21(0.975);
+            iss.setThreshold32(0.975);
+            iss.setMinNeighbors(5);
+            // 设置输入点云
+            iss.setInputCloud(cloud);
+
+            // 计算关键点
+            iss.compute(keypoints);
+
+            // 返回关键点点云
+            return keypoints;
+        }
+        // 显示加载提示
+        function showLoadingStatus() {
+            document.getElementById('loading-container').style.display = 'block';
+        }
+
+        // 隐藏加载提示
+        function hideLoadingStatus() {
+            document.getElementById('loading-container').style.display = 'none';
+        }
+
+        // 异步加载并渲染PCD文件
+        async function loadAndRenderPCDFile(file, center, filter1, segment1, Keypoints1, scale) {
+            console.log(file);
+            var path = URL.createObjectURL(file);
+            console.log(path);
+            // 显示加载提示
+            showLoadingStatus();
+            await PCL.init({
+                url: './js/pcl-core.wasm'
+            });
+            // 获取点云缓冲
+            cloudBuffer = await fetch(path).then((res) => res.arrayBuffer());
+            // 加载点云数据
+            console.log(filter1);
+
+            cloud = PCL.loadPCDData(cloudBuffer);
+            // 创建 Three.js 中的点云对象
+            var material = new THREE.PointsMaterial({ color: getRandomColor(), size: 0.005 });
+            var geometry = new THREE.BufferGeometry();
+
+            if (filter1 == 1) {
+                if (Keypoints1 > 0) await computeISSKeypoints(cloud).then((keypoints) => {
+                    cloud = keypoints;
+                });
+                cloud = removeOutliers(cloud);
+                filter1++;
+            }
+            let cloud1;
+            if (segment1 == 1) {
+                if (filter1 > 0) cloud = removeOutliers(cloud);
+                if (Keypoints1 > 0) await computeISSKeypoints(cloud).then((keypoints) => {
+                    cloud = keypoints;
+                });
+                await Segmentation(cloud, center, file, scale).then((coloredCloud) => {
+                    cloud1 = coloredCloud;
+                });
+                cloud = cloud1.points
+                let data = cloud.data
+
+                // 将数据拆分为位置和颜色数组
+                var positions = [];
+                var colors = [];
+
+                for (var i = 0; i < cloud.size; i++) {
+                    positions.push(data[i].x, data[i].y, data[i].z);
+                    colors.push(data[i].r / 255, data[i].g / 255, data[i].b / 255); // 将颜色值转换为范围在 [0, 1] 的值
+                }
+                // 将数据添加到 BufferAttribute 中
+                var positionAttribute = new THREE.Float32BufferAttribute(positions, 3);
+                var colorAttribute = new THREE.Float32BufferAttribute(colors, 3);
+
+                // 设置颜色属性需要使用 normalized 参数为 true，以确保颜色值在 [0, 1] 范围内
+                colorAttribute.normalized = true;
+                // 创建一个 BufferGeometry
+                geometry = new THREE.BufferGeometry();
+                // 将属性添加到 BufferGeometry 中
+                geometry.setAttribute('position', positionAttribute);
+                geometry.setAttribute('color', colorAttribute);
+                // 创建点云材质，使用 VertexColors 来支持顶点颜色
+                material = new THREE.PointsMaterial({ vertexColors: true, size: 0.005 });
+                segment1++;
+            }
+            if (Keypoints1 == 1) {
+                await computeISSKeypoints(cloud).then((keypoints) => {
+                    cloud = keypoints;
+                });
+                Keypoints1++;
+            }
+
+            var positions = Array.from(cloud.data);
+            var filteredPositions = positions.filter(function (value) {
+                return !Number.isNaN(value.x) && !Number.isNaN(value.y) && !Number.isNaN(value.z);
+            });
+            console.log(filteredPositions);
+
+            // 将对象数组转换为一维数组
+            var flatPositions = filteredPositions.reduce(function (prev, curr) {
+                return prev.concat(curr.x, curr.y, curr.z);
+            }, []);
+            // 创建 Float32Array
+            var positionsArray = new Float32Array(flatPositions);
+
+            // 创建 Three.js BufferAttribute
+            var positionsAttribute = new THREE.BufferAttribute(positionsArray, 3);
+            geometry.setAttribute('position', positionsAttribute);
+            console.log(positionsAttribute.array);
+
+            // 创建 Three.js 点云对象
+            pointCloud = new THREE.Points(geometry, material);
+            // 加载完成后隐藏加载提示
+            hideLoadingStatus();
+            createModelViewer(file, pointCloud, filter1, segment1, Keypoints1);
+        }
+
+        // 创建模型查看器
+        function createModelViewer(file, pointCloud, filter1, segment1, Keypoints1) {
+            // 创建模型容器元素
+            let modelContainer = document.createElement('div');
+            modelContainer.classList.add('canvas-container');
+            modelContainer.id = 'canvas-container-' + containerIndex;
+            containerIndex++;
+            document.body.appendChild(modelContainer);
+
+            // 创建 Three.js 场景
+            let scene = new THREE.Scene();
+
+            // 创建 Three.js 对象包装器
+            var pcdWrapper = new THREE.Object3D();
+            pointCloud.geometry.center();
+            pointCloud.geometry.rotateX(Math.PI);
+
+
+            // 获取模型边界框
+            var box = new THREE.Box3().setFromObject(pointCloud);
+            var center = new THREE.Vector3();
+            box.getCenter(center);
+            var Psize = new THREE.Vector3();
+            box.getSize(Psize);
+
+            // 获取点云模型的点数
+            var pointCount = pointCloud.geometry.attributes.position.count;
+
+            // 将点云添加到对象包装器
+            pcdWrapper.add(pointCloud);
+            var maxlength = Math.max(Psize.x, Psize.y, Psize.z);
+            var scale = 1 / maxlength;
+
+            // 调整对象包装器的位置和缩放
+            pcdWrapper.position.sub(center);
+            pcdWrapper.scale.set(scale, scale, scale);
+            console.log(pcdWrapper.position);
+            scene.add(pcdWrapper);
+
+            // 创建 Three.js 透视相机
+            let camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 0, 1.5);
+            scene.add(camera);
+
+            // 创建 Three.js 渲染器
+            let renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(450, 350);
+            renderer.setClearColor(0x000000);
+
+            // 创建 OrbitControls
+            let controls = new OrbitControls(camera, renderer.domElement);
+            controls.autoRotate = false; // 设置初始自动旋转状态
+            controls.target.set(0, 0, 0);
+            controls.update();
+
+            // 创建 Lil-GUI 控制器
+            let gui = new GUI();
+
+            // 创建 GUI 文件夹
+
+            var filefolder = gui.addFolder(file.name);
+            filefolder.open();
+            filefolder.add({ scale: scale.toFixed(4) }, 'scale').name('初始缩放').onChange(function (value) {
+                // 调整点云模型的大小
+                pcdWrapper.scale.set(value, value, value);
+            });
+
+            // 创建自动旋转控制器
+            let autoRotateEnabled = true;
+            var autoRotateController = filefolder.add({ autoRotate: autoRotateEnabled }, 'autoRotate').name('自动旋转');
+            autoRotateController.onChange(function (value) {
+                // 启用/禁用自动旋转
+                autoRotateEnabled = value;
+            });
+
+            if (!filter1) {
+                // 创建点云过滤控制器
+                let filter = false;
+                var filterController = filefolder.add({ filter: filter }, 'filter').name('点云过滤');
+                filterController.onChange(function (value) {
+                    // 启用/禁用点云过滤
+                    if (value) {
+                        loadAndRenderPCDFile(file, center, ++filter1, segment1, Keypoints1, scale);
+                        filter1 = 0;
+                    }
+                });
+            } else {
+                filefolder.add({ message: "已启用点云过滤" }, 'message').name('状态');
+            }
+
+
+            if (!segment1) {
+                // 创建点云分割控制器
+                let segment = false;
+                var segmentController = filefolder.add({ segment: segment }, 'segment').name('点云分割');
+                segmentController.onChange(function (value) {
+                    // 启用/禁用点云分割
+                    if (value) {
+                        loadAndRenderPCDFile(file, center, filter1, ++segment1, Keypoints1, scale);
+                        segment1 = 0;
+                    }
+                });
+            } else {
+                filefolder.add({ message: "已启用点云分割" }, 'message').name('状态');
+            }
+
+            if (!Keypoints1) {
+                // 创建点云关键点控制器
+                let Keypoints = false;
+                var KeypointsController = filefolder.add({ Keypoints: Keypoints }, 'Keypoints').name('点云关键点');
+                KeypointsController.onChange(function (value) {
+                    // 启用/禁用点云关键点
+                    if (value) {
+                        loadAndRenderPCDFile(file, center, filter1, segment1, ++Keypoints1, scale);
+                        Keypoints1 = 0;
+                    }
+                });
+            } else filefolder.add({ message: "已获得关键点云" }, 'message').name('状态');
+            // 创建点云颜色控制器
+            filefolder.addColor(pointCloud.material, 'color').name('Pointcolor').onChange(renderer.render(scene, camera));
+            // 创建点云大小控制器
+            filefolder.add(pointCloud.material, 'size', 0.001, 0.01).name('Pointsize').onChange(renderer.render(scene, camera));
+
+            // 创建可见性控制对象
+            isVisible = { enable: true };
+            // 创建显示/隐藏控制器
+            filefolder.add(isVisible, 'enable').name('show/off').onChange(function (value) { pcdWrapper.visible = value; renderer.render(scene, camera); });
+            // 将 GUI 元素添加到模型容器
+            modelContainer.appendChild(gui.domElement);
+            console.log(modelContainer.contains(gui.domElement));
+            gui.domElement.style.backgroundColor = 'red';
+            gui.domElement.style.border = '1px solid black';
+
+            // 更新 GUI 位置
+            const updateGuiPosition = (guiArray) => {
+                guiArray.forEach((gui, index) => {
+                    gui.domElement.style.position = 'relative';
+                    gui.domElement.style.top = '10px';
+                    gui.domElement.style.left = '10px';
+                });
+            };
+
+            // 监听滚动事件，更新 GUI 位置
+            window.addEventListener('scroll', () => {
+                updateGuiPosition(guiArray);
+            });
+
+            // 将 GUI 对象添加到数组
+            guiArray.push(gui);
+
+            // 增加文件夹计数
+            folderCount++;
+            // 更新文件夹计数
+            folderCountControl.setValue(folderCount);
+
+            // 将渲染器元素添加到模型容器
+            modelContainer.appendChild(renderer.domElement);
+
+            // 渲染函数
+            const render = () => {
+                controls.autoRotate = autoRotateEnabled;
+                controls.update(); // 更新控制器
+                renderer.render(scene, camera);
+                updateGuiPosition(guiArray);
+                requestAnimationFrame(render);
+            };
+
+            // 执行渲染函数
+            render();
+        }
+
+        // 窗口大小调整函数
+        function onWindowResize() {
+            // 调整相机宽高比
+            camera.aspect = window.innerWidth / window.innerHeight;
+            // 更新投影矩阵
+            camera.updateProjectionMatrix();
+            // 调整渲染器大小以适应新的窗口大小
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+    </script>
+</body>
+
+</html>

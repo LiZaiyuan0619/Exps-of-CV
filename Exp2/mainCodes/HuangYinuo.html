@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCLjs点云处理</title>
+    <script src="./js/three.js"></script>
+    <script src="./js/OrbitControls.js"></script>
+    <script src="./js/PLYLoader.js"></script>
+    <script src="./js/dat.gui.min.js"></script>
+    <script src="./js/PCDLoader.js"></script>
+    <script src="./js/pcl.js"></script>
+</head>
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        width: 100%;
+        height: 100%;
+    }
+
+    #loading {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        font-size: 30px;
+        color: #fff;
+        background-color: rgba(0, 0, 0, 0.5);
+        text-align: center;
+        z-index: 999;
+    }
+
+    .fileupload {
+        position: absolute;
+        width: 100px;
+        height: 40px;
+        top: 130px;
+        left: 20px;
+        line-height: 40px;
+        text-align: center;
+        background-color: #ebebeb;
+        border-radius: 5px;
+        cursor: pointer;
+        z-index: 999;
+        transition: all 0.2s;
+    }
+
+    .fileupload:hover {
+        background-color: #002451;
+        border: 1px solid #fff;
+        color: #fff;
+    }
+</style>
+<script type="module" src="./js/myjs2.js"></script>
+
+<body>
+    <div id="loading">正在加载……</div>
+    <input type="file" id="fileInput" style="display: none;" />
+    <div class="fileupload" onclick="uploadFiles()">上传PCD文件</div>
+</body>
+
+</html>
