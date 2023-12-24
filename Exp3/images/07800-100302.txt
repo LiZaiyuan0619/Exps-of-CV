@@ -1,0 +1,10 @@
+﻿"Symbol";"Value";"Unit";
+"TraceParts.PartNumber";"30-06122017-106412";"";
+"REFERENCE";"07800-100302";"";
+"TraceParts.PartTitle";"07800 Shaft collars set screw DIN 705, stainless steel";"";
+"TraceParts.InstanceId";"30-06122017-106412DYS2HFEECYUOK12Y9RVK9RDII";"";
+"SUPPLIER";"norelem";"";
+"DESIGN";"SHAFT COLLAR, FORM:A STAINLESS STEEL, DIN705 3X7, B=5";"";
+"TRACEPARTS";"TRACEPARTS";"";
+"TraceParts.PartLanguage";"en";"";
+"TraceParts.PartVersion";"1.0.5";"";
