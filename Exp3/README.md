@@ -62,6 +62,12 @@
 
 json->gz文件格式的转换也需要注意，网上方式参差不齐，这里是用python专门来转，感谢GPT4，直接跑通了
 
+---
+
+插一张这次为了实验而GPT生成的图像，很是喜欢，prompt调了好几次
+
+![土拨鼠嘟嘟嘟](https://cdn.jsdelivr.net/gh/LiZaiyuan0619/Temp-Pics/img/%E5%9C%9F%E6%8B%A8%E9%BC%A0%E5%98%9F%E5%98%9F%E5%98%9F.png)
+
 ## 文件说明
 
 上传的文件即是整个工作区，LiYanchao_Exp3和js/app.bundle.js即是最终修改后的代码，[myExample.json.gz](https://github.com/LiZaiyuan0619/Exps-of-CV/blob/main/Exp3/myExample.json.gz)即是零件
